@@ -249,6 +249,51 @@ body {
   text-decoration: underline;
 }
 
+/* OCR Result Inline Entities */
+.ocr-result-entities {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ocr-entity-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.ocr-entity-icon {
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.ocr-entity-link {
+  font-size: 0.75rem;
+  color: var(--accent);
+  text-decoration: none;
+  word-break: break-all;
+  background: var(--bg-primary);
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+}
+
+.ocr-entity-link:hover {
+  text-decoration: underline;
+  background: var(--border);
+}
+
+.email-link {
+  color: #81d4fa;
+}
+
+.phone-link {
+  color: #a5d6a7;
+}
+
 .processing-indicator {
   text-align: center;
   color: var(--text-secondary);
@@ -454,12 +499,173 @@ body {
   text-decoration: underline;
 }
 
+/* Slide extras (URLs + emails in slide breakdown) */
+.slide-extras {
+  padding: 0 1rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.slide-extras-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.slide-emails a {
+  display: block;
+  font-size: 0.75rem;
+  color: #81d4fa;
+  text-decoration: none;
+  margin-bottom: 0.25rem;
+}
+
+.slide-emails a:hover {
+  text-decoration: underline;
+}
+
+/* Full text toggle */
+.full-text-details {
+  background: transparent;
+}
+
+.full-text-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.full-text-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.full-text-toggle h3 {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.full-text-chars {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+}
+
 .full-text {
   background-color: var(--bg-tertiary);
   padding: 1rem;
   border-radius: 8px;
   max-height: 300px;
   overflow-y: auto;
+  margin-top: 0.75rem;
+}
+
+/* Stat highlight */
+.stat-highlight {
+  border: 1px solid var(--accent);
+}
+
+/* ── Extracted Items Grid ── */
+.extracted-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.extracted-group {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 0.75rem;
+  overflow: hidden;
+}
+
+.extracted-group-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--text-primary);
+}
+
+.extracted-icon {
+  font-size: 0.9rem;
+}
+
+.extracted-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.extracted-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.extracted-item a {
+  flex: 1;
+  color: var(--accent);
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.extracted-item a:hover {
+  text-decoration: underline;
+}
+
+.extracted-email a {
+  color: #81d4fa;
+}
+
+.extracted-phone a {
+  color: #a5d6a7;
+}
+
+.extracted-date span {
+  color: var(--text-primary);
+}
+
+.copy-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.125rem;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+.copy-btn:hover {
+  opacity: 1;
+}
+
+/* Entity tag variant */
+.entity-tag {
+  background-color: #37474f;
 }
 
 /* Slide Badge in OCR items */
@@ -547,7 +753,429 @@ body {
   border-radius: 8px;
 }
 
-/* Responsive */
+/* ─── V2: OCR Panel Header & Confidence Filter ─── */
+.ocr-panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.ocr-panel-header h2 {
+  padding: 0;
+  border-bottom: none;
+  margin: 0;
+}
+
+.confidence-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.confidence-filter label {
+  min-width: 130px;
+}
+
+.confidence-slider {
+  flex: 1;
+  max-width: 150px;
+  height: 4px;
+  -webkit-appearance: none;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.confidence-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.filter-count {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* ─── V2: Slide Timeline ─── */
+.slide-timeline {
+  padding: 0.75rem 1rem;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+}
+
+.slide-timeline-track {
+  position: relative;
+  height: 28px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.slide-timeline-segment {
+  position: absolute;
+  top: 2px;
+  height: 24px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s, filter 0.1s;
+  min-width: 20px;
+}
+
+.slide-timeline-segment:hover {
+  transform: scaleY(1.1);
+  filter: brightness(1.2);
+  z-index: 1;
+}
+
+.slide-timeline-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.slide-timeline-legend {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.slide-timeline-info {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ─── V2: Slide Groups ─── */
+.ocr-result-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.slide-group {
+  margin-bottom: 0.5rem;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.slide-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: background-color 0.15s;
+}
+
+.slide-group-header:hover {
+  background: var(--border);
+}
+
+.slide-group-toggle {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  width: 1em;
+}
+
+.slide-group-title {
+  font-weight: 600;
+}
+
+.slide-group-meta {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.slide-group-count,
+.slide-group-duration {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+}
+
+.slide-group-confidence {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.slide-group-time {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.slide-group-content {
+  padding: 0 0.5rem 0.5rem;
+}
+
+.slide-group-content .ocr-result-item {
+  margin-bottom: 0.5rem;
+}
+
+.slide-group-content .ocr-result-item:last-child {
+  margin-bottom: 0;
+}
+
+/* ─── V2: Entity Panel ─── */
+.entity-panel {
+  padding: 0.75rem 1rem;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+}
+
+.entity-panel h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.entity-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.entity-tab {
+  padding: 0.375rem 0.75rem;
+  border: none;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.entity-tab:hover:not(:disabled) {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.entity-tab.active {
+  background: var(--accent);
+  color: white;
+}
+
+.entity-tab.empty {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.entity-count {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.125rem 0.375rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.entity-tab.active .entity-count {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.entity-list {
+  max-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.entity-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-primary);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  transition: background-color 0.15s;
+  position: relative;
+}
+
+.entity-item:hover {
+  background: var(--border);
+}
+
+.entity-item.copied {
+  background: var(--success);
+}
+
+.entity-value {
+  flex: 1;
+  word-break: break-all;
+}
+
+.entity-context {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-left: 0.375rem;
+}
+
+.entity-slides {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.entity-copied-badge {
+  position: absolute;
+  right: 0.5rem;
+  font-size: 0.7rem;
+  color: white;
+  font-weight: 500;
+}
+
+.entity-empty {
+  padding: 0.75rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+/* ─── V2: Confidence Histogram ─── */
+.confidence-histogram {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.histogram-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 80px;
+  gap: 0.5rem;
+}
+
+.histogram-bar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+}
+
+.histogram-bar {
+  width: 100%;
+  min-height: 4px;
+  border-radius: 4px 4px 0 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  transition: height 0.3s;
+  margin-top: auto;
+}
+
+.histogram-count {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  padding-top: 0.25rem;
+}
+
+.histogram-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  margin-top: 0.375rem;
+}
+
+/* ─── V2: Topic Cluster View ─── */
+.topic-cluster-view {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.topic-cluster-card {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.topic-cluster-card.cluster-large {
+  flex-basis: 100%;
+}
+
+.topic-cluster-card.cluster-medium {
+  flex-basis: calc(50% - 0.375rem);
+}
+
+.topic-cluster-card.cluster-small {
+  flex-basis: calc(33.333% - 0.5rem);
+}
+
+.cluster-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.cluster-keyword {
+  background: var(--accent);
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.cluster-large .cluster-keyword {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.cluster-slides {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+/* ─── Responsive ─── */
 @media (max-width: 768px) {
   .main-layout {
     grid-template-columns: 1fr;
@@ -561,5 +1189,15 @@ body {
 
   .header h1 {
     font-size: 1rem;
+  }
+
+  .topic-cluster-card.cluster-medium,
+  .topic-cluster-card.cluster-small {
+    flex-basis: 100%;
+  }
+
+  .entity-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
   }
 }

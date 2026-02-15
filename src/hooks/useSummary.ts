@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import type { OCRResult, SessionSummary, SlideSummary } from '../types'
 import { extractKeywords } from '../services/textCleaner'
 import { inferFromText } from '../services/textInference'
+import { mergeEntities } from '../services/entityExtractor'
 
 interface UseSummaryReturn {
   summary: SessionSummary | null
@@ -36,6 +37,8 @@ function buildSlides(results: OCRResult[]): SlideSummary[] {
       r.text.length > best.text.length ? r : best
     )
     const allUrls = [...new Set(slideResults.flatMap(r => r.urls))]
+    const allEmails = [...new Set(slideResults.flatMap(r => r.entities.emails))]
+    const slideEntities = mergeEntities(slideResults.map(r => r.entities))
     const keywords = extractKeywords(bestCapture.text, 5)
 
     slides.push({
@@ -44,6 +47,8 @@ function buildSlides(results: OCRResult[]): SlideSummary[] {
       text: bestCapture.text,
       keywords,
       urls: allUrls,
+      emails: allEmails,
+      entities: slideEntities,
     })
   }
 
@@ -64,6 +69,10 @@ export function useSummary(): UseSummaryReturn {
         avgConfidence: 0,
         languages: [],
         urls: [],
+        emails: [],
+        phones: [],
+        dates: [],
+        properNouns: [],
         keywords: [],
         slides: [],
         fullText: 'No text was captured during this session.',
@@ -87,6 +96,7 @@ export function useSummary(): UseSummaryReturn {
     // Use deduplicated text (best capture per slide) for the full text
     const fullText = slides.map(s => s.text).join('\n\n')
     const allUrls = [...new Set(results.flatMap(r => r.urls))]
+    const allEntities = mergeEntities(results.map(r => r.entities))
     const avgConfidence = results.reduce((sum, r) => sum + r.confidence, 0) / results.length
     const languages = [...new Set(results.map(r => r.language).filter(l => l !== 'und'))]
 
@@ -110,6 +120,10 @@ export function useSummary(): UseSummaryReturn {
       avgConfidence,
       languages,
       urls: allUrls,
+      emails: allEntities.emails,
+      phones: allEntities.phones,
+      dates: allEntities.dates,
+      properNouns: allEntities.properNouns,
       keywords,
       slides,
       fullText,

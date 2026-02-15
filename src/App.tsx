@@ -73,7 +73,7 @@ function App() {
         isProcessing={isProcessing}
       />
 
-      <SummaryView summary={summary} onDismiss={handleDismissSummary} />
+      <SummaryView summary={summary} results={results} onDismiss={handleDismissSummary} />
     </div>
   )
 }

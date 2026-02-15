@@ -1,0 +1,174 @@
+epic:
+  summary: "V2: Enhance Transcript Usability for Imperfect OCR"
+  description: |
+    Improve user trust, comprehension, and actionability of client-side
+    OCR transcripts without changing OCR accuracy.
+
+    Key enhancements:
+    - Confidence-weighted visual display
+    - Temporal grouping by slide/time
+    - Entity extraction panel
+    - Semantic topic clustering
+  labels:
+    - v2
+    - enhancement
+    - client-side
+    - privacy-first
+
+stories:
+  - key: null
+    type: Story
+    summary: "Confidence-Weighted Transcript Display"
+    description: |
+      As a user viewing OCR transcripts,
+      I want to visually distinguish reliable text from noisy output,
+      So that I can focus on trustworthy content.
+
+      ## Background
+      Tesseract.js provides confidence scores (0-100) per capture.
+      Currently shown as badges but text itself has no visual weighting.
+
+      ## Solution
+      - Apply opacity scaling based on confidence
+      - Add filter slider to hide low-confidence captures
+      - Show confidence histogram in session summary
+    acceptance_criteria:
+      - "GIVEN a capture with <50% confidence WHEN displayed THEN text opacity is reduced"
+      - "GIVEN confidence filter set to 60% WHEN viewing results THEN captures below 60% are hidden"
+      - "GIVEN session ended WHEN viewing summary THEN confidence histogram is visible"
+      - "GIVEN filter is adjusted WHEN filter changes THEN results update in real-time"
+    priority: P1
+    story_points: 5
+    labels:
+      - ui
+      - confidence
+    components:
+      - OCRResultItem
+      - OCRPanel
+      - SummaryView
+
+  - key: null
+    type: Story
+    summary: "Temporal Grouping by Time/Slide"
+    description: |
+      As a user reviewing a multi-slide session,
+      I want captures grouped by slide with time context,
+      So that I can navigate to specific content sections easily.
+
+      ## Background
+      Current UI shows flat chronological list. Slide detection exists
+      (slideNumber field) but not used for grouping in display.
+
+      ## Solution
+      - Group captures into collapsible slide sections
+      - Show metadata: capture count, time range, avg confidence
+      - Add horizontal slide timeline with confidence heatmap
+    acceptance_criteria:
+      - "GIVEN multiple slides detected WHEN viewing results THEN captures are grouped by slide"
+      - "GIVEN a slide group WHEN rendered THEN shows slide number, capture count, and time range"
+      - "GIVEN a slide group WHEN clicked THEN expands/collapses captures"
+      - "GIVEN timeline rendered WHEN slide clicked THEN scrolls to that group"
+    priority: P1
+    story_points: 5
+    labels:
+      - ui
+      - navigation
+      - timeline
+    components:
+      - OCRResultList
+      - SlideGroup
+      - SlideTimeline
+
+  - key: null
+    type: Story
+    summary: "Entity Extraction Panel"
+    description: |
+      As a user capturing presentation/document content,
+      I want actionable entities extracted and displayed separately,
+      So that I can quickly access emails, dates, and key data.
+
+      ## Background
+      URLs already extracted. Other entities (emails, dates, phones,
+      numbers, proper nouns) buried in noisy OCR text.
+
+      ## Solution
+      - Create entityExtractor service with regex patterns
+      - Extract during OCR processing pipeline
+      - Display in tabbed panel with source slide reference
+      - Enable one-click copy
+    acceptance_criteria:
+      - "GIVEN OCR text contains email WHEN processed THEN email appears in entity panel"
+      - "GIVEN OCR text contains date (various formats) WHEN processed THEN date appears in entity panel"
+      - "GIVEN duplicate entity across captures WHEN displayed THEN shown once with multiple slide refs"
+      - "GIVEN entity in panel WHEN clicked THEN copied to clipboard"
+      - "GIVEN entity panel WHEN viewing THEN can filter by entity type (tabs)"
+    priority: P1
+    story_points: 8
+    labels:
+      - extraction
+      - entities
+      - service
+    components:
+      - entityExtractor
+      - EntityPanel
+      - useOCR
+
+  - key: null
+    type: Story
+    summary: "Semantic Topic Cluster Visualization"
+    description: |
+      As a user reviewing session summary,
+      I want keywords grouped by semantic similarity,
+      So that I can understand content themes at a glance.
+
+      ## Background
+      Current summary shows flat keyword list and basic topic clusters.
+      Clusters not visually prominent or mapped to slides.
+
+      ## Solution
+      - Improve clusterTopics algorithm
+      - Create visual cluster display (grouped chips/cards)
+      - Map clusters to source slides
+      - Indicate prominence by visual weight
+    acceptance_criteria:
+      - "GIVEN session with multiple topics WHEN summary shown THEN keywords grouped into clusters"
+      - "GIVEN topic cluster WHEN rendered THEN shows as visual grouping (chips/cards)"
+      - "GIVEN topic cluster WHEN hovered/clicked THEN shows associated slide numbers"
+      - "GIVEN prominent topic WHEN displayed THEN visually emphasized (size/color)"
+    priority: P2
+    story_points: 3
+    labels:
+      - summary
+      - clustering
+      - visualization
+    components:
+      - textInference
+      - SummaryView
+      - TopicClusterView
+
+in_scope:
+  - Confidence-based visual weighting of transcript text
+  - Confidence filter slider with real-time updates
+  - Confidence distribution histogram
+  - Slide-based grouping of captures
+  - Collapsible slide sections with metadata
+  - Horizontal slide timeline with navigation
+  - Entity extraction (emails, dates, phones, numbers, proper nouns)
+  - Tabbed entity panel with copy functionality
+  - Enhanced topic clustering algorithm
+  - Visual topic cluster display with slide mapping
+
+out_of_scope:
+  - OCR accuracy improvements
+  - Multi-language entity extraction patterns
+  - Export/import functionality
+  - Cross-session settings persistence
+  - Backend/API integration
+  - Mobile-specific optimizations
+
+technical_notes:
+  - All features client-side only (no backend)
+  - No new npm dependencies required
+  - Uses existing Tesseract.js confidence scores
+  - Uses existing slide detection infrastructure
+  - TypeScript strict mode maintained

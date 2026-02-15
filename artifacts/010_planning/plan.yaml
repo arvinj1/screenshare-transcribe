@@ -1,0 +1,113 @@
+project:
+  name: "Screenshare Transcription V2"
+  type: "enhancement"
+  stack:
+    - React
+    - Vite
+    - TypeScript
+  constraints:
+    - client-side only
+    - privacy-first
+    - no external APIs
+    - minimal UI extensions
+
+goal: |
+  Increase user trust, comprehension, and actionability of imperfect
+  client-side OCR transcripts without improving OCR accuracy directly.
+
+features:
+  - id: confidence-display
+    name: "Confidence-Weighted Transcript Display"
+    priority: P1
+    size: M
+    description: |
+      Visual confidence weighting of transcript text using existing
+      Tesseract confidence scores. Includes opacity scaling, filter
+      slider, and confidence histogram.
+    files_modify:
+      - src/components/OCRResultItem.tsx
+      - src/components/OCRPanel.tsx
+      - src/components/SummaryView.tsx
+      - src/App.css
+    files_create: []
+    acceptance_criteria:
+      - Low-confidence text visually de-emphasized
+      - Confidence filter slider filters captures in real-time
+      - Histogram shows confidence distribution
+      - Filter state persists within session
+
+  - id: temporal-grouping
+    name: "Temporal Grouping by Time/Slide"
+    priority: P1
+    size: M
+    description: |
+      Group captures by detected slide with collapsible sections
+      and horizontal timeline visualization.
+    files_modify:
+      - src/types/index.ts
+      - src/components/OCRResultList.tsx
+    files_create:
+      - src/components/SlideGroup.tsx
+      - src/components/SlideTimeline.tsx
+    acceptance_criteria:
+      - Captures grouped by slideNumber
+      - Each group shows slide number, capture count, time range
+      - Groups are collapsible/expandable
+      - Timeline provides slide-level navigation
+
+  - id: entity-extraction
+    name: "Entity Extraction Panel"
+    priority: P1
+    size: M
+    description: |
+      Dedicated panel extracting emails, dates, phone numbers,
+      prices, and proper nouns from OCR text with source tracking.
+    files_modify:
+      - src/types/index.ts
+      - src/hooks/useOCR.ts
+    files_create:
+      - src/services/entityExtractor.ts
+      - src/components/EntityPanel.tsx
+    acceptance_criteria:
+      - Emails, dates, phones, numbers, proper nouns extracted
+      - Entities deduplicated across captures
+      - Each entity shows source slide reference
+      - One-click copy to clipboard
+      - Tabbed interface for filtering by type
+
+  - id: semantic-summaries
+    name: "Semantic Summaries (Topic Clusters)"
+    priority: P2
+    size: S
+    description: |
+      Enhanced topic clustering with visual representation and
+      keyword-to-slide mapping.
+    files_modify:
+      - src/services/textInference.ts
+      - src/components/SummaryView.tsx
+    files_create:
+      - src/components/TopicClusterView.tsx
+    acceptance_criteria:
+      - Keywords grouped into semantic clusters
+      - Visual cluster display with clear groupings
+      - Each cluster shows associated slides
+      - Topic prominence indicated visually
+
+out_of_scope:
+  - OCR accuracy improvements
+  - Multi-language entity patterns
+  - Export/import functionality
+  - Settings persistence
+  - Backend integration
+
+risks:
+  - description: "Entity regex false positives"
+    mitigation: "Conservative patterns, validate format"
+  - description: "Performance with many captures"
+    mitigation: "Memoization, virtualized lists if needed"
+  - description: "Topic clustering quality"
+    mitigation: "Fallback to flat keywords if clusters poor"
+
+dependencies:
+  new_packages: []
+  notes: "All features use existing browser APIs and libraries"
