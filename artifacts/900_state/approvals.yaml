@@ -1,0 +1,15 @@
+approvals:
+  PM_INTENT:
+    status: granted
+    timestamp: "2026-02-15T00:00:00Z"
+    notes: "V2 intake approved - enhance transcript usability"
+
+  TECH_REVIEW:
+    status: pending
+    timestamp: null
+    notes: null
+
+  IMPLEMENTATION:
+    status: pending
+    timestamp: null
+    notes: null

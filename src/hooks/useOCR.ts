@@ -4,6 +4,7 @@ import { initializeOCR, recognizeImage, terminateOCR } from '../services/ocrServ
 import { extractUrls } from '../services/urlParser'
 import { detectLanguage } from '../services/languageDetector'
 import { cleanOCRText, textSimilarity } from '../services/textCleaner'
+import { extractEntities } from '../services/entityExtractor'
 
 // Threshold below which we consider two frames to show different slides/screens
 const SLIDE_CHANGE_THRESHOLD = 0.4
@@ -63,6 +64,8 @@ export function useOCR(): UseOCRReturn {
         // Extract URLs from raw text to preserve fragments the cleaner might strip
         const urls = extractUrls(rawText)
         const language = detectLanguage(text)
+        // Extract entities from both raw and cleaned text for best coverage
+        const entities = extractEntities(rawText + ' ' + text)
 
         const newResult: OCRResult = {
           id: crypto.randomUUID(),
@@ -73,6 +76,7 @@ export function useOCR(): UseOCRReturn {
           language,
           urls,
           slideNumber: currentSlideRef.current,
+          entities,
         }
 
         setResults(prev => [...prev.slice(-99), newResult])

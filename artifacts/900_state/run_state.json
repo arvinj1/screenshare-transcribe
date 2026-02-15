@@ -1,0 +1,25 @@
+{
+  "stage": "jira",
+  "last_updated": "2026-02-15T00:00:00Z",
+  "last_artifacts": [
+    "artifacts/020_jira/jira_payload.yaml",
+    "artifacts/020_jira/jira_comment.md"
+  ],
+  "history": [
+    {
+      "stage": "intake",
+      "timestamp": "2026-02-15T00:00:00Z",
+      "action": "V2 feature intake completed"
+    },
+    {
+      "stage": "planning",
+      "timestamp": "2026-02-15T00:00:00Z",
+      "action": "Execution plan and structured plan created"
+    },
+    {
+      "stage": "jira",
+      "timestamp": "2026-02-15T00:00:00Z",
+      "action": "Jira payload and comment generated"
+    }
+  ]
+}
