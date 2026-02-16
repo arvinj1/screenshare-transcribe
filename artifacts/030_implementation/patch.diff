@@ -1,0 +1,383 @@
+diff --git a/src/App.tsx b/src/App.tsx
+index ee51c69..87c876f 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -6,13 +6,17 @@ import { useScreenCapture } from './hooks/useScreenCapture'
+ import { useOCR } from './hooks/useOCR'
+ import { useFrameExtractor } from './hooks/useFrameExtractor'
+ import { useSummary } from './hooks/useSummary'
++import { useAudioCapture } from './hooks/useAudioCapture'
++import type { AudioSegment } from './types'
+ 
+ function App() {
+   const videoRef = useRef<HTMLVideoElement | null>(null)
+   const [videoReady, setVideoReady] = useState(false)
++  const [audioSegments, setAudioSegments] = useState<AudioSegment[]>([])
+   const { mediaStream, isSharing, error, startCapture, stopCapture } = useScreenCapture()
+   const { results, isProcessing, slideCount, sessionStart, processFrame, clearResults } = useOCR()
+   const { summary, generateSummary, clearSummary } = useSummary()
++  const { isListening, audioError, startAudio, stopAudio } = useAudioCapture()
+ 
+   // Get video element reference from DOM after render and wait for it to be ready
+   useEffect(() => {
+@@ -42,14 +46,30 @@ function App() {
+     onFrame: processFrame,
+   })
+ 
++  // Start audio capture when screen sharing starts
++  useEffect(() => {
++    if (isSharing) {
++      startAudio((segment) => {
++        if (segment.isFinal) {
++          setAudioSegments(prev => [...prev.slice(-199), segment])
++        }
++      })
++    }
++    return () => {
++      stopAudio()
++    }
++  }, [isSharing, startAudio, stopAudio])
++
+   const handleStop = useCallback(() => {
+-    generateSummary(results, sessionStart)
++    generateSummary(results, sessionStart, audioSegments)
++    stopAudio()
+     stopCapture()
+-  }, [generateSummary, results, sessionStart, stopCapture])
++  }, [generateSummary, results, sessionStart, audioSegments, stopAudio, stopCapture])
+ 
+   const handleDismissSummary = useCallback(() => {
+     clearSummary()
+     clearResults()
++    setAudioSegments([])
+   }, [clearSummary, clearResults])
+ 
+   return (
+@@ -57,6 +77,8 @@ function App() {
+       <Header
+         isSharing={isSharing}
+         slideCount={slideCount}
++        isListening={isListening}
++        audioError={audioError}
+         onStart={startCapture}
+         onStop={handleStop}
+       />
+@@ -70,6 +92,7 @@ function App() {
+       <MainLayout
+         mediaStream={mediaStream}
+         ocrResults={results}
++        audioSegments={audioSegments}
+         isProcessing={isProcessing}
+       />
+ 
+diff --git a/src/components/Header.tsx b/src/components/Header.tsx
+index 59d59b0..050b53c 100644
+--- a/src/components/Header.tsx
++++ b/src/components/Header.tsx
+@@ -3,11 +3,13 @@ import { ShareControls } from './ShareControls'
+ interface HeaderProps {
+   isSharing: boolean
+   slideCount: number
++  isListening: boolean
++  audioError: string | null
+   onStart: () => void
+   onStop: () => void
+ }
+ 
+-export function Header({ isSharing, slideCount, onStart, onStop }: HeaderProps) {
++export function Header({ isSharing, slideCount, isListening, audioError, onStart, onStop }: HeaderProps) {
+   return (
+     <header className="header">
+       <h1>Screen Share Transcribe</h1>
+@@ -15,6 +17,12 @@ export function Header({ isSharing, slideCount, onStart, onStop }: HeaderProps)
+         {isSharing && slideCount > 0 && (
+           <span className="live-slide-count">📄 {slideCount} slide{slideCount !== 1 ? 's' : ''}</span>
+         )}
++        {isSharing && isListening && (
++          <span className="live-audio-indicator">🎤 Listening</span>
++        )}
++        {isSharing && audioError && (
++          <span className="audio-error-indicator" title={audioError}>🎤⚠️ No audio</span>
++        )}
+         <ShareControls isSharing={isSharing} onStart={onStart} onStop={onStop} />
+       </div>
+     </header>
+diff --git a/src/components/MainLayout.tsx b/src/components/MainLayout.tsx
+index cfbbf16..7ab9198 100644
+--- a/src/components/MainLayout.tsx
++++ b/src/components/MainLayout.tsx
+@@ -1,18 +1,19 @@
+-import type { OCRResult } from '../types'
++import type { OCRResult, AudioSegment } from '../types'
+ import { ScreenPanel } from './ScreenPanel'
+ import { OCRPanel } from './OCRPanel'
+ 
+ interface MainLayoutProps {
+   mediaStream: MediaStream | null
+   ocrResults: OCRResult[]
++  audioSegments: AudioSegment[]
+   isProcessing: boolean
+ }
+ 
+-export function MainLayout({ mediaStream, ocrResults, isProcessing }: MainLayoutProps) {
++export function MainLayout({ mediaStream, ocrResults, audioSegments, isProcessing }: MainLayoutProps) {
+   return (
+     <main className="main-layout">
+       <ScreenPanel mediaStream={mediaStream} />
+-      <OCRPanel results={ocrResults} isProcessing={isProcessing} />
++      <OCRPanel results={ocrResults} audioSegments={audioSegments} isProcessing={isProcessing} />
+     </main>
+   )
+ }
+diff --git a/src/components/OCRPanel.tsx b/src/components/OCRPanel.tsx
+index b284c86..d1f8db3 100644
+--- a/src/components/OCRPanel.tsx
++++ b/src/components/OCRPanel.tsx
+@@ -1,16 +1,17 @@
+-import type { OCRResult } from '../types'
++import type { OCRResult, AudioSegment } from '../types'
+ import { OCRResultList } from './OCRResultList'
+ 
+ interface OCRPanelProps {
+   results: OCRResult[]
++  audioSegments: AudioSegment[]
+   isProcessing: boolean
+ }
+ 
+-export function OCRPanel({ results, isProcessing }: OCRPanelProps) {
++export function OCRPanel({ results, audioSegments, isProcessing }: OCRPanelProps) {
+   return (
+     <div className="ocr-panel">
+       <h2>Extracted Text</h2>
+-      <OCRResultList results={results} isProcessing={isProcessing} />
++      <OCRResultList results={results} audioSegments={audioSegments} isProcessing={isProcessing} />
+     </div>
+   )
+ }
+diff --git a/src/components/OCRResultList.tsx b/src/components/OCRResultList.tsx
+index ff25c7b..f7597be 100644
+--- a/src/components/OCRResultList.tsx
++++ b/src/components/OCRResultList.tsx
+@@ -1,34 +1,53 @@
+-import { useEffect, useRef } from 'react'
+-import type { OCRResult } from '../types'
++import { useEffect, useRef, useMemo } from 'react'
++import type { OCRResult, AudioSegment } from '../types'
+ import { OCRResultItem } from './OCRResultItem'
++import { AudioSegmentItem } from './AudioSegmentItem'
++
++type TimelineEntry =
++  | { type: 'ocr'; data: OCRResult }
++  | { type: 'audio'; data: AudioSegment }
+ 
+ interface OCRResultListProps {
+   results: OCRResult[]
++  audioSegments: AudioSegment[]
+   isProcessing: boolean
+ }
+ 
+-export function OCRResultList({ results, isProcessing }: OCRResultListProps) {
++export function OCRResultList({ results, audioSegments, isProcessing }: OCRResultListProps) {
+   const containerRef = useRef<HTMLDivElement>(null)
+ 
++  const timeline = useMemo<TimelineEntry[]>(() => {
++    const entries: TimelineEntry[] = [
++      ...results.map(r => ({ type: 'ocr' as const, data: r })),
++      ...audioSegments.map(s => ({ type: 'audio' as const, data: s })),
++    ]
++    entries.sort((a, b) => a.data.timestamp - b.data.timestamp)
++    return entries
++  }, [results, audioSegments])
++
+   useEffect(() => {
+     if (containerRef.current) {
+       containerRef.current.scrollTop = containerRef.current.scrollHeight
+     }
+-  }, [results])
++  }, [timeline])
+ 
+-  if (results.length === 0 && !isProcessing) {
++  if (timeline.length === 0 && !isProcessing) {
+     return (
+       <div className="ocr-result-list empty">
+-        <p>OCR results will appear here when screen sharing starts</p>
++        <p>OCR and audio results will appear here when screen sharing starts</p>
+       </div>
+     )
+   }
+ 
+   return (
+     <div className="ocr-result-list" ref={containerRef}>
+-      {results.map(result => (
+-        <OCRResultItem key={result.id} result={result} />
+-      ))}
++      {timeline.map(entry =>
++        entry.type === 'ocr' ? (
++          <OCRResultItem key={entry.data.id} result={entry.data} />
++        ) : (
++          <AudioSegmentItem key={entry.data.id} segment={entry.data} />
++        )
++      )}
+       {isProcessing && (
+         <div className="processing-indicator">Processing...</div>
+       )}
+diff --git a/src/components/SummaryView.tsx b/src/components/SummaryView.tsx
+index 5c0523f..0d54157 100644
+--- a/src/components/SummaryView.tsx
++++ b/src/components/SummaryView.tsx
+@@ -65,6 +65,18 @@ export function SummaryView({ summary, onDismiss }: SummaryViewProps) {
+                   <span className="stat-label">Languages</span>
+                 </div>
+               )}
++              {summary.audioSegmentCount > 0 && (
++                <div className="stat-item">
++                  <span className="stat-value">{summary.audioSegmentCount}</span>
++                  <span className="stat-label">Audio Segments</span>
++                </div>
++              )}
++              {summary.audioWordCount > 0 && (
++                <div className="stat-item">
++                  <span className="stat-value">{summary.audioWordCount}</span>
++                  <span className="stat-label">Audio Words</span>
++                </div>
++              )}
+             </div>
+           </section>
+ 
+@@ -171,6 +183,17 @@ export function SummaryView({ summary, onDismiss }: SummaryViewProps) {
+             </section>
+           )}
+ 
++          {/* Audio Transcript */}
++          {summary.audioTranscript && summary.audioTranscript.length > 0 && (
++            <section className="summary-section">
++              <h3>🎤 Audio Transcript</h3>
++              <details className="audio-transcript-detail">
++                <summary>{summary.audioSegmentCount} segment{summary.audioSegmentCount !== 1 ? 's' : ''}, {summary.audioWordCount} words</summary>
++                <pre className="full-text">{summary.audioTranscript}</pre>
++              </details>
++            </section>
++          )}
++
+           {/* Full captured text */}
+           <section className="summary-section">
+             <h3>📝 Full Captured Text</h3>
+diff --git a/src/hooks/useSummary.ts b/src/hooks/useSummary.ts
+index 8f1a3c7..47a7b02 100644
+--- a/src/hooks/useSummary.ts
++++ b/src/hooks/useSummary.ts
+@@ -1,11 +1,11 @@
+ import { useState, useCallback } from 'react'
+-import type { OCRResult, SessionSummary, SlideSummary } from '../types'
++import type { OCRResult, AudioSegment, SessionSummary, SlideSummary } from '../types'
+ import { extractKeywords } from '../services/textCleaner'
+ import { inferFromText } from '../services/textInference'
+ 
+ interface UseSummaryReturn {
+   summary: SessionSummary | null
+-  generateSummary: (results: OCRResult[], sessionStart: number | null) => void
++  generateSummary: (results: OCRResult[], sessionStart: number | null, audioSegments?: AudioSegment[]) => void
+   clearSummary: () => void
+ }
+ 
+@@ -53,8 +53,17 @@ function buildSlides(results: OCRResult[]): SlideSummary[] {
+ export function useSummary(): UseSummaryReturn {
+   const [summary, setSummary] = useState<SessionSummary | null>(null)
+ 
+-  const generateSummary = useCallback((results: OCRResult[], sessionStart: number | null) => {
+-    if (results.length === 0) {
++  const generateSummary = useCallback((results: OCRResult[], sessionStart: number | null, audioSegments: AudioSegment[] = []) => {
++    const audioTranscript = audioSegments
++      .filter(s => s.isFinal)
++      .map(s => s.text)
++      .join(' ')
++    const audioWordCount = audioTranscript.length > 0
++      ? audioTranscript.split(/\s+/).filter(w => w.length > 0).length
++      : 0
++    const audioSegmentCount = audioSegments.filter(s => s.isFinal).length
++
++    if (results.length === 0 && audioSegmentCount === 0) {
+       setSummary({
+         totalCaptures: 0,
+         slideCount: 0,
+@@ -66,6 +75,9 @@ export function useSummary(): UseSummaryReturn {
+         urls: [],
+         keywords: [],
+         slides: [],
++        audioSegmentCount: 0,
++        audioWordCount: 0,
++        audioTranscript: '',
+         fullText: 'No text was captured during this session.',
+         inference: {
+           contentType: 'general',
+@@ -85,21 +97,28 @@ export function useSummary(): UseSummaryReturn {
+     const slideCount = slides.length
+ 
+     // Use deduplicated text (best capture per slide) for the full text
+-    const fullText = slides.map(s => s.text).join('\n\n')
++    const ocrText = slides.map(s => s.text).join('\n\n')
+     const allUrls = [...new Set(results.flatMap(r => r.urls))]
+-    const avgConfidence = results.reduce((sum, r) => sum + r.confidence, 0) / results.length
++    const avgConfidence = results.length > 0
++      ? results.reduce((sum, r) => sum + r.confidence, 0) / results.length
++      : 0
+     const languages = [...new Set(results.map(r => r.language).filter(l => l !== 'und'))]
+ 
+-    const wordCount = fullText.split(/\s+/).filter(w => w.length > 0).length
+-    const charCount = fullText.length
++    // Combine OCR and audio text for inference
++    const fullText = audioTranscript.length > 0
++      ? `${ocrText}\n\n--- Audio Transcript ---\n${audioTranscript}`
++      : ocrText
++
++    const wordCount = ocrText.split(/\s+/).filter(w => w.length > 0).length
++    const charCount = ocrText.length
+ 
+     const durationMs = sessionStart ? Date.now() - sessionStart : 0
+     const duration = formatDuration(durationMs)
+ 
+     const keywords = extractKeywords(fullText, 15)
+ 
+-    // Run text inferencing for intelligent insights
+-    const inference = inferFromText(fullText, keywords, slideCount, wordCount, duration)
++    // Run text inferencing for intelligent insights (uses combined text)
++    const inference = inferFromText(fullText, keywords, slideCount, wordCount + audioWordCount, duration)
+ 
+     setSummary({
+       totalCaptures: results.length,
+@@ -112,6 +131,9 @@ export function useSummary(): UseSummaryReturn {
+       urls: allUrls,
+       keywords,
+       slides,
++      audioSegmentCount,
++      audioWordCount,
++      audioTranscript,
+       fullText,
+       inference,
+     })
+diff --git a/src/types/index.ts b/src/types/index.ts
+index 8296b69..6a0ded8 100644
+--- a/src/types/index.ts
++++ b/src/types/index.ts
+@@ -1,3 +1,11 @@
++export interface AudioSegment {
++  id: string
++  timestamp: number
++  text: string
++  isFinal: boolean
++  confidence: number
++}
++
+ export interface OCRResult {
+   id: string
+   timestamp: number
+@@ -20,6 +28,9 @@ export interface SessionSummary {
+   urls: string[]
+   keywords: string[]
+   slides: SlideSummary[]
++  audioSegmentCount: number
++  audioWordCount: number
++  audioTranscript: string
+   fullText: string
+   inference: {
+     contentType: string

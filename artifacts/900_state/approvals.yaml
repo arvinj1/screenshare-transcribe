@@ -1,0 +1,16 @@
+gates:
+  PM_INTENT:
+    status: "approved"
+    by: "Aravind sethuraman"
+    at: "2026-02-16T00:00:00-08:00"
+    notes: "Lets proceed with this"
+  TL_EXECUTION:
+    status: "pending"
+    by: null
+    at: null
+    notes: null
+  CODE_REVIEW:
+    status: "approved"
+    by: "aravind"
+    at: "2026-02-16T00:00:00-08:00"
+    notes: "looks ok to me"

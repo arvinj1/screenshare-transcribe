@@ -1,3 +1,11 @@
+export interface AudioSegment {
+  id: string
+  timestamp: number
+  text: string
+  isFinal: boolean
+  confidence: number
+}
+
 export interface OCRResult {
   id: string
   timestamp: number
@@ -20,6 +28,9 @@ export interface SessionSummary {
   urls: string[]
   keywords: string[]
   slides: SlideSummary[]
+  audioSegmentCount: number
+  audioWordCount: number
+  audioTranscript: string
   fullText: string
   inference: {
     contentType: string

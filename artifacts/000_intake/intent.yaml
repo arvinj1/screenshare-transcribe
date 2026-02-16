@@ -1,0 +1,42 @@
+meta:
+  created_at: "2026-02-16T00:00:00-08:00"
+  source:
+    type: "text"
+    ref: "chat"
+  requester: "eng"
+
+feature:
+  title: "Add audio alignment to screenshare transcription pipeline"
+  problem: >
+    The current screenshare-transcribe app captures screen frames and runs OCR
+    (Tesseract.js) to extract on-screen text, but it has no audio capture or
+    transcription. Meeting context, spoken commentary, and verbal explanations
+    are lost. Adding audio alignment would pair what is being said with what is
+    being shown, producing a richer, time-synced transcript.
+  scope:
+    in:
+      - "Capture microphone/system audio alongside the existing screen capture"
+      - "Transcribe audio in real-time (browser-based speech-to-text or external API)"
+      - "Align audio transcript segments with OCR frame timestamps"
+      - "Present a unified, time-synced view of OCR text + audio transcript"
+    out:
+      - "Speaker diarization (who said what)"
+      - "Video recording / playback"
+      - "Server-side processing — stays browser-only unless explicitly scoped in"
+  constraints:
+    - "Must work in modern Chromium-based browsers (getDisplayMedia + getAudioTracks)"
+    - "Should not regress existing OCR pipeline performance"
+    - "Latency of audio transcription should be < 3 seconds for usable real-time feel"
+  acceptance_criteria:
+    - "Audio is captured when screen sharing starts (user grants mic/system-audio permission)"
+    - "Audio transcript appears alongside OCR results in the UI"
+    - "Each audio segment carries a timestamp that can be correlated with OCR frame timestamps"
+    - "Summary view incorporates both OCR and audio transcript data"
+  nonfunctional:
+    performance:
+      - "Audio transcription latency < 3s"
+      - "No visible frame-rate drop in screen capture when audio pipeline is active"
+    reliability:
+      - "Graceful fallback if audio permission is denied (OCR-only mode continues)"
+    security:
+      - "Audio data stays client-side unless an external transcription API is explicitly configured"

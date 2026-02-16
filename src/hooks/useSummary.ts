@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react'
-import type { OCRResult, SessionSummary, SlideSummary } from '../types'
+import type { OCRResult, AudioSegment, SessionSummary, SlideSummary } from '../types'
 import { extractKeywords } from '../services/textCleaner'
 import { inferFromText } from '../services/textInference'
 
 interface UseSummaryReturn {
   summary: SessionSummary | null
-  generateSummary: (results: OCRResult[], sessionStart: number | null) => void
+  generateSummary: (results: OCRResult[], sessionStart: number | null, audioSegments?: AudioSegment[]) => void
   clearSummary: () => void
 }
 
@@ -53,8 +53,17 @@ function buildSlides(results: OCRResult[]): SlideSummary[] {
 export function useSummary(): UseSummaryReturn {
   const [summary, setSummary] = useState<SessionSummary | null>(null)
 
-  const generateSummary = useCallback((results: OCRResult[], sessionStart: number | null) => {
-    if (results.length === 0) {
+  const generateSummary = useCallback((results: OCRResult[], sessionStart: number | null, audioSegments: AudioSegment[] = []) => {
+    const audioTranscript = audioSegments
+      .filter(s => s.isFinal)
+      .map(s => s.text)
+      .join(' ')
+    const audioWordCount = audioTranscript.length > 0
+      ? audioTranscript.split(/\s+/).filter(w => w.length > 0).length
+      : 0
+    const audioSegmentCount = audioSegments.filter(s => s.isFinal).length
+
+    if (results.length === 0 && audioSegmentCount === 0) {
       setSummary({
         totalCaptures: 0,
         slideCount: 0,
@@ -66,6 +75,9 @@ export function useSummary(): UseSummaryReturn {
         urls: [],
         keywords: [],
         slides: [],
+        audioSegmentCount: 0,
+        audioWordCount: 0,
+        audioTranscript: '',
         fullText: 'No text was captured during this session.',
         inference: {
           contentType: 'general',
@@ -85,21 +97,28 @@ export function useSummary(): UseSummaryReturn {
     const slideCount = slides.length
 
     // Use deduplicated text (best capture per slide) for the full text
-    const fullText = slides.map(s => s.text).join('\n\n')
+    const ocrText = slides.map(s => s.text).join('\n\n')
     const allUrls = [...new Set(results.flatMap(r => r.urls))]
-    const avgConfidence = results.reduce((sum, r) => sum + r.confidence, 0) / results.length
+    const avgConfidence = results.length > 0
+      ? results.reduce((sum, r) => sum + r.confidence, 0) / results.length
+      : 0
     const languages = [...new Set(results.map(r => r.language).filter(l => l !== 'und'))]
 
-    const wordCount = fullText.split(/\s+/).filter(w => w.length > 0).length
-    const charCount = fullText.length
+    // Combine OCR and audio text for inference
+    const fullText = audioTranscript.length > 0
+      ? `${ocrText}\n\n--- Audio Transcript ---\n${audioTranscript}`
+      : ocrText
+
+    const wordCount = ocrText.split(/\s+/).filter(w => w.length > 0).length
+    const charCount = ocrText.length
 
     const durationMs = sessionStart ? Date.now() - sessionStart : 0
     const duration = formatDuration(durationMs)
 
     const keywords = extractKeywords(fullText, 15)
 
-    // Run text inferencing for intelligent insights
-    const inference = inferFromText(fullText, keywords, slideCount, wordCount, duration)
+    // Run text inferencing for intelligent insights (uses combined text)
+    const inference = inferFromText(fullText, keywords, slideCount, wordCount + audioWordCount, duration)
 
     setSummary({
       totalCaptures: results.length,
@@ -112,6 +131,9 @@ export function useSummary(): UseSummaryReturn {
       urls: allUrls,
       keywords,
       slides,
+      audioSegmentCount,
+      audioWordCount,
+      audioTranscript,
       fullText,
       inference,
     })

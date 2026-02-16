@@ -1,0 +1,154 @@
+meta:
+  created_at: "2026-02-16T00:00:00-08:00"
+  intent_ref: "artifacts/000_intake/intent.yaml"
+  planner: "intent-forge-planner"
+
+summary: >
+  Add real-time audio capture and transcription alongside the existing OCR
+  pipeline, using the browser-native Web Speech API (SpeechRecognition).
+  Audio transcript segments are time-stamped and displayed interleaved with
+  OCR results. The summary view merges both data sources.
+
+approach: "web-speech-api"
+approach_rationale: >
+  The Web Speech API is built into Chromium browsers, requires zero
+  additional dependencies, and provides real-time interim + final results
+  with timestamps. This satisfies the browser-only constraint and <3s
+  latency requirement. Trade-off: requires internet in Chrome (audio is
+  sent to Google servers for recognition) and is unavailable in Firefox/
+  Safari — but the existing app already targets Chromium (getDisplayMedia).
+  If the user later needs offline or privacy-first transcription, a follow-up
+  task can integrate Whisper WASM.
+
+tl_gate_required: false
+tl_gate_rationale: >
+  Single-repo, additive change with clear scope. No cross-repo contracts,
+  no infrastructure changes, no breaking API changes. Existing OCR pipeline
+  is untouched.
+
+clarification_questions: []
+
+tasks:
+  - id: "T1"
+    title: "Add AudioSegment type"
+    description: >
+      Add AudioSegment interface to src/types/index.ts. Fields: id (string),
+      timestamp (number), text (string), isFinal (boolean), confidence (number).
+      Add audioSegments to AppState (optional, for reference).
+    files:
+      - src/types/index.ts
+    estimate: "XS"
+
+  - id: "T2"
+    title: "Create useAudioCapture hook"
+    description: >
+      New hook src/hooks/useAudioCapture.ts. Responsibilities:
+      - Request microphone access via navigator.mediaDevices.getUserMedia({ audio: true })
+      - Instantiate webkitSpeechRecognition / SpeechRecognition
+      - Configure: continuous=true, interimResults=true, lang='en-US'
+      - On onresult, emit AudioSegment objects via a callback
+      - Expose: startAudio(), stopAudio(), isListening, audioError
+      - Graceful fallback: if SpeechRecognition is unavailable or mic
+        permission denied, set audioError and let the app continue OCR-only
+    files:
+      - src/hooks/useAudioCapture.ts (NEW)
+    estimate: "S"
+
+  - id: "T3"
+    title: "Integrate audio capture into App.tsx"
+    description: >
+      Wire useAudioCapture into App.tsx:
+      - Start audio when startCapture succeeds (alongside screen capture)
+      - Stop audio when handleStop is called
+      - Collect audioSegments into state (useState<AudioSegment[]>)
+      - Pass audioSegments to MainLayout and SummaryView
+    files:
+      - src/App.tsx
+    estimate: "S"
+
+  - id: "T4"
+    title: "Create AudioSegmentItem component"
+    description: >
+      New component src/components/AudioSegmentItem.tsx to render a single
+      audio transcript segment. Similar visual pattern to OCRResultItem but
+      with an audio badge instead of slide badge. Shows timestamp, text,
+      and interim/final indicator.
+    files:
+      - src/components/AudioSegmentItem.tsx (NEW)
+    estimate: "XS"
+
+  - id: "T5"
+    title: "Add unified transcript view to OCRPanel"
+    description: >
+      Modify OCRPanel to accept audioSegments prop alongside results.
+      Interleave OCR results and audio segments by timestamp in the
+      result list. Each entry is visually distinguishable (OCR = existing
+      style, audio = new AudioSegmentItem with different badge color).
+      Update OCRResultList to render both types.
+    files:
+      - src/components/OCRPanel.tsx
+      - src/components/OCRResultList.tsx
+    estimate: "S"
+
+  - id: "T6"
+    title: "Update MainLayout to pass audioSegments"
+    description: >
+      Add audioSegments prop to MainLayout and forward to OCRPanel.
+    files:
+      - src/components/MainLayout.tsx
+    estimate: "XS"
+
+  - id: "T7"
+    title: "Integrate audio transcript into summary"
+    description: >
+      Modify useSummary.generateSummary to accept audioSegments parameter.
+      Concatenate audio transcript text with OCR fullText (clearly
+      separated) before running inferFromText. Update SessionSummary type
+      to include audioWordCount and audioSegmentCount.
+    files:
+      - src/hooks/useSummary.ts
+      - src/types/index.ts
+    estimate: "S"
+
+  - id: "T8"
+    title: "Display audio stats in SummaryView"
+    description: >
+      Show audio-specific stats in the summary modal: audio segment count,
+      audio word count, and a collapsible section with the full audio
+      transcript.
+    files:
+      - src/components/SummaryView.tsx
+    estimate: "XS"
+
+  - id: "T9"
+    title: "Add audio status indicator to Header"
+    description: >
+      Show a mic icon / indicator in the Header when audio capture is active.
+      Show warning if audio permission was denied.
+    files:
+      - src/components/Header.tsx
+    estimate: "XS"
+
+rollout:
+  strategy: "feature-branch"
+  branch: "feat/v3-align-audio"
+  steps:
+    - "Implement T1-T2 (types + audio hook)"
+    - "Implement T3 (wire into App)"
+    - "Implement T4-T6 (UI components)"
+    - "Implement T7-T8 (summary integration)"
+    - "Implement T9 (header indicator)"
+    - "Manual test in Chrome: verify audio + OCR run together"
+    - "Verify graceful fallback when mic permission denied"
+  rollback: "Revert branch; no infrastructure changes to undo"
+
+risks:
+  - risk: "Web Speech API sends audio to Google servers in Chrome"
+    mitigation: "Document in UI; future task can add Whisper WASM for offline"
+  - risk: "SpeechRecognition unavailable in non-Chromium browsers"
+    mitigation: "Graceful fallback to OCR-only mode; matches existing browser target"
+  - risk: "Interim results can be noisy / duplicate"
+    mitigation: "Only store final results; show interim as transient indicator"
+
+dependencies_new: []
+dependencies_notes: "No new npm packages required. Web Speech API is browser-native."

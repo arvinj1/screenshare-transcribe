@@ -65,6 +65,18 @@ export function SummaryView({ summary, onDismiss }: SummaryViewProps) {
                   <span className="stat-label">Languages</span>
                 </div>
               )}
+              {summary.audioSegmentCount > 0 && (
+                <div className="stat-item">
+                  <span className="stat-value">{summary.audioSegmentCount}</span>
+                  <span className="stat-label">Audio Segments</span>
+                </div>
+              )}
+              {summary.audioWordCount > 0 && (
+                <div className="stat-item">
+                  <span className="stat-value">{summary.audioWordCount}</span>
+                  <span className="stat-label">Audio Words</span>
+                </div>
+              )}
             </div>
           </section>
 
@@ -168,6 +180,17 @@ export function SummaryView({ summary, onDismiss }: SummaryViewProps) {
                   </details>
                 ))}
               </div>
+            </section>
+          )}
+
+          {/* Audio Transcript */}
+          {summary.audioTranscript && summary.audioTranscript.length > 0 && (
+            <section className="summary-section">
+              <h3>🎤 Audio Transcript</h3>
+              <details className="audio-transcript-detail">
+                <summary>{summary.audioSegmentCount} segment{summary.audioSegmentCount !== 1 ? 's' : ''}, {summary.audioWordCount} words</summary>
+                <pre className="full-text">{summary.audioTranscript}</pre>
+              </details>
             </section>
           )}
 
