@@ -1,26 +1,28 @@
-## Change Summary: Audio Alignment
+## Change Summary: Audio-Only Transcription Mode
 
-### Files modified (8 existing + 2 new)
+### Files modified (6 existing + 1 new)
 
 **New files:**
-- `src/hooks/useAudioCapture.ts` — React hook for mic capture + Web Speech API transcription
-- `src/components/AudioSegmentItem.tsx` — UI component for rendering audio transcript segments
+- `src/components/AudioOnlyPanel.tsx` — Visual panel with pulsing mic icon, replaces ScreenPanel in audio-only mode
 
 **Modified files:**
-- `src/types/index.ts` — Added `AudioSegment` interface; added `audioSegmentCount`, `audioWordCount`, `audioTranscript` to `SessionSummary`
-- `src/App.tsx` — Wired `useAudioCapture` hook; manages `audioSegments` state; starts/stops audio with screen capture
-- `src/components/Header.tsx` — Added mic status indicator (listening / error)
-- `src/components/MainLayout.tsx` — Passes `audioSegments` prop through to `OCRPanel`
-- `src/components/OCRPanel.tsx` — Accepts and forwards `audioSegments` to `OCRResultList`
-- `src/components/OCRResultList.tsx` — Interleaves OCR + audio entries sorted by timestamp
-- `src/hooks/useSummary.ts` — Accepts `audioSegments`, merges audio transcript with OCR text for inference
-- `src/components/SummaryView.tsx` — Shows audio stats + collapsible audio transcript section
+- `src/types/index.ts` — Added `AppMode` type (`'screen-ocr' | 'audio-only'`); added `audioText` to `SlideSummary`
+- `src/App.tsx` — Added `mode` state, `isRecordingAudio` state, `audioOnlyStartRef`; dispatches start/stop based on mode; passes mode to Header and MainLayout
+- `src/components/Header.tsx` — Added mode toggle (segmented control), disabled during active session; adapted indicators for both modes
+- `src/components/ShareControls.tsx` — Accepts `mode` and `isActive` props; adaptive button labels ("Start Sharing" vs "Start Recording")
+- `src/components/MainLayout.tsx` — Accepts `mode` and `isActive` props; conditionally renders AudioOnlyPanel or ScreenPanel
+- `src/App.css` — Added CSS for mode toggle, audio-only panel with pulse animation, slide cards, summary redesign, export buttons
+
+**Not modified (verified working as-is):**
+- `src/hooks/useSummary.ts` — Already handles `results=[]` + audio segments correctly for audio-only summaries
 
 ### Build verification
 - `npx tsc --noEmit` passes with zero errors
+- `npx vite build` produces clean production build
 - No new dependencies added
 
 ### Key decisions
-- Only **final** speech recognition results are stored in state (interim results are discarded)
-- Auto-restart on `SpeechRecognition.onend` to handle the browser's automatic stop behavior
-- Audio transcript appended after OCR text (separated by `--- Audio Transcript ---`) for inference
+- Modes are mutually exclusive — toggle is disabled while a session is active
+- Audio-only mode reuses existing `useAudioCapture` hook unchanged
+- `audioOnlyStartRef` tracks session start time for duration calculation (since useOCR's `sessionStart` is not available)
+- Audio-only summary passes `results=[]` to `generateSummary`; the existing guard (`results.length === 0 && audioSegmentCount === 0`) correctly passes through when audio exists

@@ -1,383 +1,693 @@
+diff --git a/src/App.css b/src/App.css
+index 12f270c..ccc6ee4 100644
+--- a/src/App.css
++++ b/src/App.css
+@@ -547,6 +547,303 @@ body {
+   border-radius: 8px;
+ }
+ 
++/* ===== Mode Toggle ===== */
++.mode-toggle {
++  display: flex;
++  background-color: var(--bg-tertiary);
++  border-radius: 6px;
++  overflow: hidden;
++  border: 1px solid var(--border);
++}
++
++.mode-toggle-disabled {
++  opacity: 0.5;
++  pointer-events: none;
++}
++
++.mode-toggle-btn {
++  padding: 0.375rem 0.75rem;
++  border: none;
++  background: none;
++  color: var(--text-secondary);
++  font-size: 0.75rem;
++  font-weight: 500;
++  cursor: pointer;
++  transition: background-color 0.2s, color 0.2s;
++}
++
++.mode-toggle-btn:hover:not(:disabled) {
++  color: var(--text-primary);
++}
++
++.mode-toggle-btn.active {
++  background-color: var(--accent);
++  color: white;
++}
++
++.mode-toggle-btn:disabled {
++  cursor: not-allowed;
++}
++
++/* ===== Audio Only Panel ===== */
++.audio-only-panel {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++}
++
++.audio-only-content {
++  display: flex;
++  flex-direction: column;
++  align-items: center;
++  gap: 1rem;
++  color: var(--text-secondary);
++}
++
++.mic-icon {
++  color: var(--text-secondary);
++  transition: color 0.3s;
++}
++
++.mic-icon-active {
++  color: var(--accent);
++  animation: pulse-mic 1.5s ease-in-out infinite;
++}
++
++@keyframes pulse-mic {
++  0%, 100% { opacity: 1; transform: scale(1); }
++  50% { opacity: 0.6; transform: scale(1.08); }
++}
++
++.audio-only-label {
++  font-size: 0.875rem;
++  font-weight: 500;
++}
++
++/* ===== Slide Cards (Live Timeline) ===== */
++.slide-card {
++  background-color: var(--bg-tertiary);
++  border-radius: 8px;
++  padding: 0.75rem;
++  margin-bottom: 0.75rem;
++  border-left: 3px solid var(--accent);
++}
++
++.slide-card-pre {
++  border-left-color: var(--text-secondary);
++}
++
++.slide-card-live {
++  border-left-color: var(--warning);
++  opacity: 0.7;
++}
++
++.slide-card-header {
++  margin-bottom: 0.5rem;
++}
++
++.slide-card-label {
++  font-size: 0.75rem;
++  font-weight: 600;
++  text-transform: uppercase;
++  letter-spacing: 0.05em;
++  color: var(--text-secondary);
++}
++
++.slide-card-ocr {
++  font-size: 0.875rem;
++  line-height: 1.5;
++  white-space: pre-wrap;
++  word-break: break-word;
++  margin-bottom: 0.5rem;
++}
++
++.slide-card-audio {
++  border-top: 1px solid var(--border);
++  padding-top: 0.5rem;
++  margin-top: 0.25rem;
++}
++
++.slide-card-audio-heading {
++  font-size: 0.7rem;
++  font-weight: 600;
++  text-transform: uppercase;
++  letter-spacing: 0.05em;
++  color: var(--text-secondary);
++  margin-bottom: 0.375rem;
++}
++
++.slide-card-audio-line {
++  display: flex;
++  align-items: baseline;
++  gap: 0.5rem;
++  margin-bottom: 0.25rem;
++  font-size: 0.8125rem;
++  line-height: 1.5;
++}
++
++.slide-card-audio-text {
++  color: var(--text-secondary);
++}
++
++/* Audio badges */
++.audio-badge {
++  font-size: 0.625rem;
++  padding: 0.0625rem 0.375rem;
++  border-radius: 4px;
++  font-weight: 600;
++  background-color: #7c3aed;
++  color: white;
++  flex-shrink: 0;
++  text-transform: uppercase;
++  letter-spacing: 0.04em;
++}
++
++.live-audio-indicator {
++  background-color: var(--warning);
++  color: black;
++}
++
++.audio-error-indicator {
++  background-color: var(--danger);
++  color: white;
++}
++
++/* ===== Summary Stats Bar ===== */
++.summary-stats-bar {
++  display: flex;
++  align-items: center;
++  gap: 0.5rem;
++  padding: 0.625rem 0.75rem;
++  background-color: var(--bg-tertiary);
++  border-radius: 8px;
++  font-size: 0.8125rem;
++  color: var(--text-secondary);
++  margin-bottom: 1.5rem;
++  flex-wrap: wrap;
++}
++
++.stats-bar-sep {
++  color: var(--border);
++}
++
++/* ===== Insights List ===== */
++.insights-list {
++  list-style: none;
++  padding: 0;
++}
++
++.insights-list li {
++  padding: 0.5rem 0.75rem;
++  margin-bottom: 0.5rem;
++  background-color: var(--bg-tertiary);
++  border-radius: 6px;
++  font-size: 0.875rem;
++  line-height: 1.5;
++}
++
++.insight-point {
++  border-left: 3px solid var(--success);
++}
++
++.insight-action {
++  border-left: 3px solid var(--warning);
++}
++
++/* ===== Summary Timeline ===== */
++.summary-timeline {
++  display: flex;
++  flex-direction: column;
++  gap: 0.75rem;
++}
++
++.summary-timeline-card {
++  background-color: var(--bg-tertiary);
++  border-radius: 8px;
++  overflow: hidden;
++}
++
++.summary-timeline-card-header {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  padding: 0.625rem 0.75rem;
++  border-bottom: 1px solid var(--border);
++}
++
++.summary-timeline-audio {
++  display: flex;
++  align-items: baseline;
++  gap: 0.5rem;
++  padding: 0.5rem 0.75rem;
++  font-size: 0.8125rem;
++  color: var(--text-secondary);
++  line-height: 1.5;
++  border-top: 1px solid var(--border);
++}
++
++/* ===== Raw Data Section ===== */
++.raw-data-section {
++  border-top: 1px solid var(--border);
++  padding-top: 1rem;
++}
++
++.raw-data-toggle {
++  background: none;
++  border: 1px solid var(--border);
++  color: var(--text-secondary);
++  font-size: 0.8125rem;
++  padding: 0.375rem 0.75rem;
++  border-radius: 6px;
++  cursor: pointer;
++  transition: background-color 0.2s;
++}
++
++.raw-data-toggle:hover {
++  background-color: var(--bg-tertiary);
++}
++
++.raw-data-content {
++  margin-top: 1rem;
++}
++
++.raw-data-block {
++  margin-bottom: 1rem;
++}
++
++.raw-data-block h4 {
++  font-size: 0.8125rem;
++  font-weight: 600;
++  color: var(--text-secondary);
++  margin-bottom: 0.5rem;
++}
++
++/* ===== Export Buttons ===== */
++.summary-header-actions {
++  display: flex;
++  align-items: center;
++  gap: 0.5rem;
++}
++
++.btn-export {
++  background-color: var(--accent);
++  color: white;
++}
++
++.btn-export:hover {
++  background-color: var(--accent-hover);
++}
++
++.btn-copy {
++  background-color: var(--bg-tertiary);
++  color: var(--text-primary);
++  border: 1px solid var(--border);
++}
++
++.btn-copy:hover {
++  background-color: var(--border);
++}
++
+ /* Responsive */
+ @media (max-width: 768px) {
+   .main-layout {
 diff --git a/src/App.tsx b/src/App.tsx
-index ee51c69..87c876f 100644
+index 87c876f..2b897e1 100644
 --- a/src/App.tsx
 +++ b/src/App.tsx
-@@ -6,13 +6,17 @@ import { useScreenCapture } from './hooks/useScreenCapture'
- import { useOCR } from './hooks/useOCR'
+@@ -7,30 +7,35 @@ import { useOCR } from './hooks/useOCR'
  import { useFrameExtractor } from './hooks/useFrameExtractor'
  import { useSummary } from './hooks/useSummary'
-+import { useAudioCapture } from './hooks/useAudioCapture'
-+import type { AudioSegment } from './types'
+ import { useAudioCapture } from './hooks/useAudioCapture'
+-import type { AudioSegment } from './types'
++import type { AppMode, AudioSegment } from './types'
  
  function App() {
    const videoRef = useRef<HTMLVideoElement | null>(null)
    const [videoReady, setVideoReady] = useState(false)
-+  const [audioSegments, setAudioSegments] = useState<AudioSegment[]>([])
+   const [audioSegments, setAudioSegments] = useState<AudioSegment[]>([])
++  const [mode, setMode] = useState<AppMode>('screen-ocr')
++  const [isRecordingAudio, setIsRecordingAudio] = useState(false)
++  const audioOnlyStartRef = useRef<number | null>(null)
    const { mediaStream, isSharing, error, startCapture, stopCapture } = useScreenCapture()
    const { results, isProcessing, slideCount, sessionStart, processFrame, clearResults } = useOCR()
    const { summary, generateSummary, clearSummary } = useSummary()
-+  const { isListening, audioError, startAudio, stopAudio } = useAudioCapture()
+   const { isListening, audioError, startAudio, stopAudio } = useAudioCapture()
  
++  const isActive = isSharing || isRecordingAudio
++
    // Get video element reference from DOM after render and wait for it to be ready
    useEffect(() => {
-@@ -42,14 +46,30 @@ function App() {
+     if (mediaStream && isSharing) {
+       const video = document.querySelector('.video-preview') as HTMLVideoElement
+       if (video) {
+         videoRef.current = video
+-        
++
+         const handleCanPlay = () => {
+           setVideoReady(true)
+         }
+-        
++
+         video.addEventListener('canplay', handleCanPlay)
+-        
++
+         return () => {
+           video.removeEventListener('canplay', handleCanPlay)
+         }
+@@ -46,9 +51,9 @@ function App() {
      onFrame: processFrame,
    })
  
-+  // Start audio capture when screen sharing starts
-+  useEffect(() => {
-+    if (isSharing) {
-+      startAudio((segment) => {
-+        if (segment.isFinal) {
-+          setAudioSegments(prev => [...prev.slice(-199), segment])
-+        }
-+      })
-+    }
-+    return () => {
-+      stopAudio()
-+    }
-+  }, [isSharing, startAudio, stopAudio])
-+
-   const handleStop = useCallback(() => {
--    generateSummary(results, sessionStart)
-+    generateSummary(results, sessionStart, audioSegments)
-+    stopAudio()
-     stopCapture()
--  }, [generateSummary, results, sessionStart, stopCapture])
-+  }, [generateSummary, results, sessionStart, audioSegments, stopAudio, stopCapture])
+-  // Start audio capture when screen sharing starts
++  // Start audio capture when screen sharing starts (screen-ocr mode only)
+   useEffect(() => {
+-    if (isSharing) {
++    if (isSharing && mode === 'screen-ocr') {
+       startAudio((segment) => {
+         if (segment.isFinal) {
+           setAudioSegments(prev => [...prev.slice(-199), segment])
+@@ -56,10 +61,32 @@ function App() {
+       })
+     }
+     return () => {
+-      stopAudio()
++      if (mode === 'screen-ocr') {
++        stopAudio()
++      }
+     }
+-  }, [isSharing, startAudio, stopAudio])
++  }, [isSharing, mode, startAudio, stopAudio])
  
-   const handleDismissSummary = useCallback(() => {
-     clearSummary()
-     clearResults()
-+    setAudioSegments([])
++  // Audio-only mode: start recording
++  const handleStartAudioOnly = useCallback(() => {
++    audioOnlyStartRef.current = Date.now()
++    setIsRecordingAudio(true)
++    startAudio((segment) => {
++      if (segment.isFinal) {
++        setAudioSegments(prev => [...prev.slice(-199), segment])
++      }
++    })
++  }, [startAudio])
++
++  // Audio-only mode: stop recording
++  const handleStopAudioOnly = useCallback(() => {
++    generateSummary([], audioOnlyStartRef.current, audioSegments)
++    stopAudio()
++    setIsRecordingAudio(false)
++    audioOnlyStartRef.current = null
++  }, [generateSummary, audioSegments, stopAudio])
++
++  // Screen-ocr mode: stop sharing
+   const handleStop = useCallback(() => {
+     generateSummary(results, sessionStart, audioSegments)
+     stopAudio()
+@@ -72,15 +99,22 @@ function App() {
+     setAudioSegments([])
    }, [clearSummary, clearResults])
  
++  // Dispatch start/stop based on mode
++  const handleStart = mode === 'audio-only' ? handleStartAudioOnly : startCapture
++  const handleStopDispatch = mode === 'audio-only' ? handleStopAudioOnly : handleStop
++
    return (
-@@ -57,6 +77,8 @@ function App() {
+     <div className="app">
        <Header
++        mode={mode}
++        onModeChange={setMode}
++        isActive={isActive}
          isSharing={isSharing}
          slideCount={slideCount}
-+        isListening={isListening}
-+        audioError={audioError}
-         onStart={startCapture}
-         onStop={handleStop}
-       />
-@@ -70,6 +92,7 @@ function App() {
-       <MainLayout
-         mediaStream={mediaStream}
-         ocrResults={results}
-+        audioSegments={audioSegments}
-         isProcessing={isProcessing}
+         isListening={isListening}
+         audioError={audioError}
+-        onStart={startCapture}
+-        onStop={handleStop}
++        onStart={handleStart}
++        onStop={handleStopDispatch}
        />
  
+       {error && (
+@@ -90,6 +124,8 @@ function App() {
+       )}
+ 
+       <MainLayout
++        mode={mode}
++        isActive={isActive}
+         mediaStream={mediaStream}
+         ocrResults={results}
+         audioSegments={audioSegments}
 diff --git a/src/components/Header.tsx b/src/components/Header.tsx
-index 59d59b0..050b53c 100644
+index 050b53c..918e856 100644
 --- a/src/components/Header.tsx
 +++ b/src/components/Header.tsx
-@@ -3,11 +3,13 @@ import { ShareControls } from './ShareControls'
+@@ -1,6 +1,10 @@
++import type { AppMode } from '../types'
+ import { ShareControls } from './ShareControls'
+ 
  interface HeaderProps {
++  mode: AppMode
++  onModeChange: (mode: AppMode) => void
++  isActive: boolean
    isSharing: boolean
    slideCount: number
-+  isListening: boolean
-+  audioError: string | null
+   isListening: boolean
+@@ -9,21 +13,37 @@ interface HeaderProps {
+   onStop: () => void
+ }
+ 
+-export function Header({ isSharing, slideCount, isListening, audioError, onStart, onStop }: HeaderProps) {
++export function Header({ mode, onModeChange, isActive, isSharing, slideCount, isListening, audioError, onStart, onStop }: HeaderProps) {
+   return (
+     <header className="header">
+       <h1>Screen Share Transcribe</h1>
+       <div className="header-right">
+-        {isSharing && slideCount > 0 && (
+-          <span className="live-slide-count">📄 {slideCount} slide{slideCount !== 1 ? 's' : ''}</span>
++        <div className={`mode-toggle ${isActive ? 'mode-toggle-disabled' : ''}`}>
++          <button
++            className={`mode-toggle-btn ${mode === 'screen-ocr' ? 'active' : ''}`}
++            onClick={() => onModeChange('screen-ocr')}
++            disabled={isActive}
++          >
++            Screen+OCR
++          </button>
++          <button
++            className={`mode-toggle-btn ${mode === 'audio-only' ? 'active' : ''}`}
++            onClick={() => onModeChange('audio-only')}
++            disabled={isActive}
++          >
++            Audio Only
++          </button>
++        </div>
++        {mode === 'screen-ocr' && isSharing && slideCount > 0 && (
++          <span className="live-slide-count">{slideCount} slide{slideCount !== 1 ? 's' : ''}</span>
+         )}
+-        {isSharing && isListening && (
+-          <span className="live-audio-indicator">🎤 Listening</span>
++        {isActive && isListening && (
++          <span className="live-audio-indicator">Listening</span>
+         )}
+-        {isSharing && audioError && (
+-          <span className="audio-error-indicator" title={audioError}>🎤⚠️ No audio</span>
++        {isActive && audioError && (
++          <span className="audio-error-indicator" title={audioError}>No audio</span>
+         )}
+-        <ShareControls isSharing={isSharing} onStart={onStart} onStop={onStop} />
++        <ShareControls mode={mode} isActive={isActive} onStart={onStart} onStop={onStop} />
+       </div>
+     </header>
+   )
+diff --git a/src/components/MainLayout.tsx b/src/components/MainLayout.tsx
+index 7ab9198..424c7c9 100644
+--- a/src/components/MainLayout.tsx
++++ b/src/components/MainLayout.tsx
+@@ -1,18 +1,25 @@
+-import type { OCRResult, AudioSegment } from '../types'
++import type { AppMode, OCRResult, AudioSegment } from '../types'
+ import { ScreenPanel } from './ScreenPanel'
++import { AudioOnlyPanel } from './AudioOnlyPanel'
+ import { OCRPanel } from './OCRPanel'
+ 
+ interface MainLayoutProps {
++  mode: AppMode
++  isActive: boolean
+   mediaStream: MediaStream | null
+   ocrResults: OCRResult[]
+   audioSegments: AudioSegment[]
+   isProcessing: boolean
+ }
+ 
+-export function MainLayout({ mediaStream, ocrResults, audioSegments, isProcessing }: MainLayoutProps) {
++export function MainLayout({ mode, isActive, mediaStream, ocrResults, audioSegments, isProcessing }: MainLayoutProps) {
+   return (
+     <main className="main-layout">
+-      <ScreenPanel mediaStream={mediaStream} />
++      {mode === 'audio-only' ? (
++        <AudioOnlyPanel isActive={isActive} />
++      ) : (
++        <ScreenPanel mediaStream={mediaStream} />
++      )}
+       <OCRPanel results={ocrResults} audioSegments={audioSegments} isProcessing={isProcessing} />
+     </main>
+   )
+diff --git a/src/components/ShareControls.tsx b/src/components/ShareControls.tsx
+index ffeae63..c1be40a 100644
+--- a/src/components/ShareControls.tsx
++++ b/src/components/ShareControls.tsx
+@@ -1,19 +1,25 @@
++import type { AppMode } from '../types'
++
+ interface ShareControlsProps {
+-  isSharing: boolean
++  mode: AppMode
++  isActive: boolean
    onStart: () => void
    onStop: () => void
  }
  
--export function Header({ isSharing, slideCount, onStart, onStop }: HeaderProps) {
-+export function Header({ isSharing, slideCount, isListening, audioError, onStart, onStop }: HeaderProps) {
-   return (
-     <header className="header">
-       <h1>Screen Share Transcribe</h1>
-@@ -15,6 +17,12 @@ export function Header({ isSharing, slideCount, onStart, onStop }: HeaderProps)
-         {isSharing && slideCount > 0 && (
-           <span className="live-slide-count">📄 {slideCount} slide{slideCount !== 1 ? 's' : ''}</span>
-         )}
-+        {isSharing && isListening && (
-+          <span className="live-audio-indicator">🎤 Listening</span>
-+        )}
-+        {isSharing && audioError && (
-+          <span className="audio-error-indicator" title={audioError}>🎤⚠️ No audio</span>
-+        )}
-         <ShareControls isSharing={isSharing} onStart={onStart} onStop={onStop} />
-       </div>
-     </header>
-diff --git a/src/components/MainLayout.tsx b/src/components/MainLayout.tsx
-index cfbbf16..7ab9198 100644
---- a/src/components/MainLayout.tsx
-+++ b/src/components/MainLayout.tsx
-@@ -1,18 +1,19 @@
--import type { OCRResult } from '../types'
-+import type { OCRResult, AudioSegment } from '../types'
- import { ScreenPanel } from './ScreenPanel'
- import { OCRPanel } from './OCRPanel'
- 
- interface MainLayoutProps {
-   mediaStream: MediaStream | null
-   ocrResults: OCRResult[]
-+  audioSegments: AudioSegment[]
-   isProcessing: boolean
- }
- 
--export function MainLayout({ mediaStream, ocrResults, isProcessing }: MainLayoutProps) {
-+export function MainLayout({ mediaStream, ocrResults, audioSegments, isProcessing }: MainLayoutProps) {
-   return (
-     <main className="main-layout">
-       <ScreenPanel mediaStream={mediaStream} />
--      <OCRPanel results={ocrResults} isProcessing={isProcessing} />
-+      <OCRPanel results={ocrResults} audioSegments={audioSegments} isProcessing={isProcessing} />
-     </main>
-   )
- }
-diff --git a/src/components/OCRPanel.tsx b/src/components/OCRPanel.tsx
-index b284c86..d1f8db3 100644
---- a/src/components/OCRPanel.tsx
-+++ b/src/components/OCRPanel.tsx
-@@ -1,16 +1,17 @@
--import type { OCRResult } from '../types'
-+import type { OCRResult, AudioSegment } from '../types'
- import { OCRResultList } from './OCRResultList'
- 
- interface OCRPanelProps {
-   results: OCRResult[]
-+  audioSegments: AudioSegment[]
-   isProcessing: boolean
- }
- 
--export function OCRPanel({ results, isProcessing }: OCRPanelProps) {
-+export function OCRPanel({ results, audioSegments, isProcessing }: OCRPanelProps) {
-   return (
-     <div className="ocr-panel">
-       <h2>Extracted Text</h2>
--      <OCRResultList results={results} isProcessing={isProcessing} />
-+      <OCRResultList results={results} audioSegments={audioSegments} isProcessing={isProcessing} />
-     </div>
-   )
- }
-diff --git a/src/components/OCRResultList.tsx b/src/components/OCRResultList.tsx
-index ff25c7b..f7597be 100644
---- a/src/components/OCRResultList.tsx
-+++ b/src/components/OCRResultList.tsx
-@@ -1,34 +1,53 @@
--import { useEffect, useRef } from 'react'
--import type { OCRResult } from '../types'
-+import { useEffect, useRef, useMemo } from 'react'
-+import type { OCRResult, AudioSegment } from '../types'
- import { OCRResultItem } from './OCRResultItem'
-+import { AudioSegmentItem } from './AudioSegmentItem'
+-export function ShareControls({ isSharing, onStart, onStop }: ShareControlsProps) {
++export function ShareControls({ mode, isActive, onStart, onStop }: ShareControlsProps) {
++  const startLabel = mode === 'audio-only' ? 'Start Recording' : 'Start Sharing'
++  const stopLabel = mode === 'audio-only' ? 'Stop Recording' : 'Stop Sharing'
 +
-+type TimelineEntry =
-+  | { type: 'ocr'; data: OCRResult }
-+  | { type: 'audio'; data: AudioSegment }
- 
- interface OCRResultListProps {
-   results: OCRResult[]
-+  audioSegments: AudioSegment[]
-   isProcessing: boolean
- }
- 
--export function OCRResultList({ results, isProcessing }: OCRResultListProps) {
-+export function OCRResultList({ results, audioSegments, isProcessing }: OCRResultListProps) {
-   const containerRef = useRef<HTMLDivElement>(null)
- 
-+  const timeline = useMemo<TimelineEntry[]>(() => {
-+    const entries: TimelineEntry[] = [
-+      ...results.map(r => ({ type: 'ocr' as const, data: r })),
-+      ...audioSegments.map(s => ({ type: 'audio' as const, data: s })),
-+    ]
-+    entries.sort((a, b) => a.data.timestamp - b.data.timestamp)
-+    return entries
-+  }, [results, audioSegments])
-+
-   useEffect(() => {
-     if (containerRef.current) {
-       containerRef.current.scrollTop = containerRef.current.scrollHeight
-     }
--  }, [results])
-+  }, [timeline])
- 
--  if (results.length === 0 && !isProcessing) {
-+  if (timeline.length === 0 && !isProcessing) {
-     return (
-       <div className="ocr-result-list empty">
--        <p>OCR results will appear here when screen sharing starts</p>
-+        <p>OCR and audio results will appear here when screen sharing starts</p>
-       </div>
-     )
-   }
- 
    return (
-     <div className="ocr-result-list" ref={containerRef}>
--      {results.map(result => (
--        <OCRResultItem key={result.id} result={result} />
--      ))}
-+      {timeline.map(entry =>
-+        entry.type === 'ocr' ? (
-+          <OCRResultItem key={entry.data.id} result={entry.data} />
-+        ) : (
-+          <AudioSegmentItem key={entry.data.id} segment={entry.data} />
-+        )
-+      )}
-       {isProcessing && (
-         <div className="processing-indicator">Processing...</div>
+     <div className="share-controls">
+-      {isSharing ? (
++      {isActive ? (
+         <button className="btn btn-stop" onClick={onStop}>
+-          Stop Sharing
++          {stopLabel}
+         </button>
+       ) : (
+         <button className="btn btn-start" onClick={onStart}>
+-          Start Sharing
++          {startLabel}
+         </button>
        )}
-diff --git a/src/components/SummaryView.tsx b/src/components/SummaryView.tsx
-index 5c0523f..0d54157 100644
---- a/src/components/SummaryView.tsx
-+++ b/src/components/SummaryView.tsx
-@@ -65,6 +65,18 @@ export function SummaryView({ summary, onDismiss }: SummaryViewProps) {
-                   <span className="stat-label">Languages</span>
-                 </div>
-               )}
-+              {summary.audioSegmentCount > 0 && (
-+                <div className="stat-item">
-+                  <span className="stat-value">{summary.audioSegmentCount}</span>
-+                  <span className="stat-label">Audio Segments</span>
-+                </div>
-+              )}
-+              {summary.audioWordCount > 0 && (
-+                <div className="stat-item">
-+                  <span className="stat-value">{summary.audioWordCount}</span>
-+                  <span className="stat-label">Audio Words</span>
-+                </div>
-+              )}
-             </div>
-           </section>
- 
-@@ -171,6 +183,17 @@ export function SummaryView({ summary, onDismiss }: SummaryViewProps) {
-             </section>
-           )}
- 
-+          {/* Audio Transcript */}
-+          {summary.audioTranscript && summary.audioTranscript.length > 0 && (
-+            <section className="summary-section">
-+              <h3>🎤 Audio Transcript</h3>
-+              <details className="audio-transcript-detail">
-+                <summary>{summary.audioSegmentCount} segment{summary.audioSegmentCount !== 1 ? 's' : ''}, {summary.audioWordCount} words</summary>
-+                <pre className="full-text">{summary.audioTranscript}</pre>
-+              </details>
-+            </section>
-+          )}
-+
-           {/* Full captured text */}
-           <section className="summary-section">
-             <h3>📝 Full Captured Text</h3>
+     </div>
 diff --git a/src/hooks/useSummary.ts b/src/hooks/useSummary.ts
-index 8f1a3c7..47a7b02 100644
+index 47a7b02..728bcb8 100644
 --- a/src/hooks/useSummary.ts
 +++ b/src/hooks/useSummary.ts
-@@ -1,11 +1,11 @@
- import { useState, useCallback } from 'react'
--import type { OCRResult, SessionSummary, SlideSummary } from '../types'
-+import type { OCRResult, AudioSegment, SessionSummary, SlideSummary } from '../types'
- import { extractKeywords } from '../services/textCleaner'
- import { inferFromText } from '../services/textInference'
- 
- interface UseSummaryReturn {
-   summary: SessionSummary | null
--  generateSummary: (results: OCRResult[], sessionStart: number | null) => void
-+  generateSummary: (results: OCRResult[], sessionStart: number | null, audioSegments?: AudioSegment[]) => void
-   clearSummary: () => void
+@@ -20,7 +20,7 @@ function formatDuration(ms: number): string {
+   return `${seconds}s`
  }
  
-@@ -53,8 +53,17 @@ function buildSlides(results: OCRResult[]): SlideSummary[] {
- export function useSummary(): UseSummaryReturn {
-   const [summary, setSummary] = useState<SessionSummary | null>(null)
+-function buildSlides(results: OCRResult[]): SlideSummary[] {
++function buildSlides(results: OCRResult[], audioSegments: AudioSegment[] = []): SlideSummary[] {
+   const slideMap = new Map<number, OCRResult[]>()
  
--  const generateSummary = useCallback((results: OCRResult[], sessionStart: number | null) => {
--    if (results.length === 0) {
-+  const generateSummary = useCallback((results: OCRResult[], sessionStart: number | null, audioSegments: AudioSegment[] = []) => {
-+    const audioTranscript = audioSegments
-+      .filter(s => s.isFinal)
+   for (const r of results) {
+@@ -29,8 +29,14 @@ function buildSlides(results: OCRResult[]): SlideSummary[] {
+     slideMap.set(r.slideNumber, existing)
+   }
+ 
++  // Sort slides by number to compute timestamp ranges
++  const slideNumbers = [...slideMap.keys()].sort((a, b) => a - b)
++
+   const slides: SlideSummary[] = []
+-  for (const [slideNumber, slideResults] of slideMap) {
++  for (let i = 0; i < slideNumbers.length; i++) {
++    const slideNumber = slideNumbers[i]
++    const slideResults = slideMap.get(slideNumber)!
++
+     // Use the longest text capture as representative for the slide
+     const bestCapture = slideResults.reduce((best, r) =>
+       r.text.length > best.text.length ? r : best
+@@ -38,16 +44,44 @@ function buildSlides(results: OCRResult[]): SlideSummary[] {
+     const allUrls = [...new Set(slideResults.flatMap(r => r.urls))]
+     const keywords = extractKeywords(bestCapture.text, 5)
+ 
++    // Compute time range for this slide
++    const slideStart = Math.min(...slideResults.map(r => r.timestamp))
++    const slideEnd = i < slideNumbers.length - 1
++      ? Math.min(...slideMap.get(slideNumbers[i + 1])!.map(r => r.timestamp))
++      : Infinity
++
++    // Gather audio segments that fall within this slide's time range
++    const finalSegments = audioSegments.filter(s => s.isFinal)
++    const slideAudio = finalSegments
++      .filter(s => s.timestamp >= slideStart && s.timestamp < slideEnd)
 +      .map(s => s.text)
 +      .join(' ')
-+    const audioWordCount = audioTranscript.length > 0
-+      ? audioTranscript.split(/\s+/).filter(w => w.length > 0).length
-+      : 0
-+    const audioSegmentCount = audioSegments.filter(s => s.isFinal).length
++      .trim()
 +
-+    if (results.length === 0 && audioSegmentCount === 0) {
-       setSummary({
-         totalCaptures: 0,
-         slideCount: 0,
-@@ -66,6 +75,9 @@ export function useSummary(): UseSummaryReturn {
-         urls: [],
-         keywords: [],
-         slides: [],
-+        audioSegmentCount: 0,
-+        audioWordCount: 0,
-+        audioTranscript: '',
-         fullText: 'No text was captured during this session.',
-         inference: {
-           contentType: 'general',
-@@ -85,21 +97,28 @@ export function useSummary(): UseSummaryReturn {
+     slides.push({
+       slideNumber,
+       captureCount: slideResults.length,
+       text: bestCapture.text,
++      audioText: slideAudio,
+       keywords,
+       urls: allUrls,
+     })
+   }
+ 
+-  return slides.sort((a, b) => a.slideNumber - b.slideNumber)
++  // Assign any audio that occurred before the first slide
++  if (slides.length > 0 && results.length > 0) {
++    const firstSlideStart = Math.min(...results.map(r => r.timestamp))
++    const preAudio = audioSegments
++      .filter(s => s.isFinal && s.timestamp < firstSlideStart)
++      .map(s => s.text)
++      .join(' ')
++      .trim()
++    if (preAudio) {
++      slides[0].audioText = preAudio + (slides[0].audioText ? ' ' + slides[0].audioText : '')
++    }
++  }
++
++  return slides
+ }
+ 
+ export function useSummary(): UseSummaryReturn {
+@@ -93,7 +127,7 @@ export function useSummary(): UseSummaryReturn {
+       return
+     }
+ 
+-    const slides = buildSlides(results)
++    const slides = buildSlides(results, audioSegments)
      const slideCount = slides.length
  
      // Use deduplicated text (best capture per slide) for the full text
--    const fullText = slides.map(s => s.text).join('\n\n')
-+    const ocrText = slides.map(s => s.text).join('\n\n')
-     const allUrls = [...new Set(results.flatMap(r => r.urls))]
--    const avgConfidence = results.reduce((sum, r) => sum + r.confidence, 0) / results.length
-+    const avgConfidence = results.length > 0
-+      ? results.reduce((sum, r) => sum + r.confidence, 0) / results.length
-+      : 0
-     const languages = [...new Set(results.map(r => r.language).filter(l => l !== 'und'))]
- 
--    const wordCount = fullText.split(/\s+/).filter(w => w.length > 0).length
--    const charCount = fullText.length
-+    // Combine OCR and audio text for inference
-+    const fullText = audioTranscript.length > 0
-+      ? `${ocrText}\n\n--- Audio Transcript ---\n${audioTranscript}`
-+      : ocrText
-+
-+    const wordCount = ocrText.split(/\s+/).filter(w => w.length > 0).length
-+    const charCount = ocrText.length
- 
-     const durationMs = sessionStart ? Date.now() - sessionStart : 0
-     const duration = formatDuration(durationMs)
- 
-     const keywords = extractKeywords(fullText, 15)
- 
--    // Run text inferencing for intelligent insights
--    const inference = inferFromText(fullText, keywords, slideCount, wordCount, duration)
-+    // Run text inferencing for intelligent insights (uses combined text)
-+    const inference = inferFromText(fullText, keywords, slideCount, wordCount + audioWordCount, duration)
- 
-     setSummary({
-       totalCaptures: results.length,
-@@ -112,6 +131,9 @@ export function useSummary(): UseSummaryReturn {
-       urls: allUrls,
-       keywords,
-       slides,
-+      audioSegmentCount,
-+      audioWordCount,
-+      audioTranscript,
-       fullText,
-       inference,
-     })
 diff --git a/src/types/index.ts b/src/types/index.ts
-index 8296b69..6a0ded8 100644
+index 6a0ded8..589c593 100644
 --- a/src/types/index.ts
 +++ b/src/types/index.ts
-@@ -1,3 +1,11 @@
-+export interface AudioSegment {
-+  id: string
-+  timestamp: number
-+  text: string
-+  isFinal: boolean
-+  confidence: number
-+}
+@@ -1,3 +1,5 @@
++export type AppMode = 'screen-ocr' | 'audio-only'
 +
- export interface OCRResult {
+ export interface AudioSegment {
    id: string
    timestamp: number
-@@ -20,6 +28,9 @@ export interface SessionSummary {
-   urls: string[]
+@@ -48,6 +50,7 @@ export interface SlideSummary {
+   slideNumber: number
+   captureCount: number
+   text: string
++  audioText: string
    keywords: string[]
-   slides: SlideSummary[]
-+  audioSegmentCount: number
-+  audioWordCount: number
-+  audioTranscript: string
-   fullText: string
-   inference: {
-     contentType: string
+   urls: string[]
+ }
+diff --git a/src/components/AudioOnlyPanel.tsx b/src/components/AudioOnlyPanel.tsx
+new file mode 100644
+index 0000000..537e4a2
+--- /dev/null
++++ b/src/components/AudioOnlyPanel.tsx
+@@ -0,0 +1,23 @@
++interface AudioOnlyPanelProps {
++  isActive: boolean
++}
++
++export function AudioOnlyPanel({ isActive }: AudioOnlyPanelProps) {
++  return (
++    <div className="screen-panel audio-only-panel">
++      <div className="audio-only-content">
++        <div className={`mic-icon ${isActive ? 'mic-icon-active' : ''}`}>
++          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
++            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
++            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
++            <line x1="12" y1="19" x2="12" y2="23" />
++            <line x1="8" y1="23" x2="16" y2="23" />
++          </svg>
++        </div>
++        <span className="audio-only-label">
++          {isActive ? 'Listening...' : 'Ready to record'}
++        </span>
++      </div>
++    </div>
++  )
++}

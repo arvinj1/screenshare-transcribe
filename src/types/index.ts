@@ -1,3 +1,5 @@
+export type AppMode = 'screen-ocr' | 'audio-only'
+
 export interface AudioSegment {
   id: string
   timestamp: number
@@ -48,6 +50,7 @@ export interface SlideSummary {
   slideNumber: number
   captureCount: number
   text: string
+  audioText: string
   keywords: string[]
   urls: string[]
 }

@@ -1,32 +1,36 @@
-## Exec Summary: Audio Alignment for Screenshare Transcription
+## Exec Summary: Audio-Only Transcription Mode
 
-**Goal:** Pair real-time audio transcription with the existing OCR pipeline so users get a time-synced view of what was shown + what was said.
+**Goal:** Let users capture and transcribe microphone audio without requiring screen sharing — a standalone "Audio-only" mode alongside the existing Screen+OCR mode.
 
-**User impact:** Users capture richer meeting/presentation context — verbal explanations appear alongside extracted screen text, and the session summary incorporates both sources.
+**User impact:** Users who want speech-to-text for meetings, lectures, or dictation no longer need to initiate a screen share. They pick "Audio-only", hit Start, and see live transcription immediately.
 
 **What will change:**
-- Microphone audio captured alongside screen share (browser permission prompt)
-- Real-time speech-to-text via Web Speech API (zero new dependencies)
-- Audio transcript segments displayed interleaved with OCR results by timestamp
-- Summary view includes both OCR and audio data
+- Mode toggle in the header: "Screen+OCR" (default) or "Audio-only"
+- Audio-only mode: mic capture only, no screen share prompt
+- Screen panel replaced with pulsing mic indicator when in audio-only mode
+- Button labels adapt: "Start Sharing" vs "Start Recording"
+- Session summary generated from audio transcript alone
+- Mode toggle disabled while a session is active
 
 **Out of scope:**
+- Cloud STT / backend services (Web Speech API only)
+- Simultaneous modes (mutually exclusive)
+- Audio file upload / import
 - Speaker diarization
-- Video recording / playback
-- Server-side processing
-- Offline transcription (future: Whisper WASM)
+- Rewriting existing Screen+OCR mode
 
 **Success criteria:**
-- Audio captured when sharing starts
-- Audio transcript visible alongside OCR results
-- Timestamps correlate between audio and OCR
-- Summary incorporates both data sources
-- Graceful fallback if mic permission denied
+- User can toggle between modes before starting
+- Audio-only starts mic without screen share prompt
+- Live transcript segments appear with language and confidence
+- Audio indicator replaces screen panel
+- Stop produces a clean session summary from audio data
+- Existing Screen+OCR mode is completely unchanged
 
-**Rollout approach:** Feature branch (feat/v3-align-audio), 9 incremental tasks, manual test in Chrome.
+**Rollout approach:** 7 incremental tasks on feat/v3-align-audio branch. Manual verification in Chrome.
 
 **Risks / tradeoffs:**
-- Web Speech API sends audio to Google servers (acceptable for MVP; document for user)
-- Chromium-only (matches existing browser target)
+- Web Speech API sends audio to Google in Chrome (same as existing audio pipeline)
+- Audio-only summary is sparser than screen+OCR (acceptable for MVP)
 
-**Open questions:** None — scope is clear.
+**Open questions:** None — scope is clear and constrained.

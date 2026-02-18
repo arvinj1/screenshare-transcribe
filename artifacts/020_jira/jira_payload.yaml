@@ -4,143 +4,128 @@
 epic:
   project_key: ""  # FILL IN
   issue_type: "Epic"
-  summary: "Add audio alignment to screenshare transcription pipeline"
+  summary: "Audio-only transcription mode"
   description: >
-    Pair real-time audio transcription with the existing OCR pipeline so
-    users get a time-synced view of what was shown on screen alongside
-    what was said. Uses the browser-native Web Speech API — zero new
-    dependencies. Includes graceful fallback to OCR-only mode when
-    microphone permission is denied or SpeechRecognition is unavailable.
+    Add a standalone "Audio-only" mode alongside the existing Screen+OCR mode.
+    When selected, the app captures microphone audio via the browser Web Speech
+    API without triggering a screen share prompt. Live transcription segments
+    are displayed in the transcript panel. The screen panel is replaced with a
+    pulsing mic indicator. Session summary is generated from audio data alone.
+    Modes are mutually exclusive; the toggle is disabled during active sessions.
   labels:
-    - "audio-alignment"
+    - "audio-only"
     - "feature"
+    - "v3"
   components: []
   priority: "Medium"
 
 stories:
   - key_suffix: "T1"
     issue_type: "Task"
-    summary: "Add AudioSegment type definition"
+    summary: "Add AppMode type to shared types"
     description: >
-      Add AudioSegment interface to the shared types module.
-      Fields: id (string), timestamp (number), text (string),
-      isFinal (boolean), confidence (number).
+      Add AppMode = 'screen-ocr' | 'audio-only' type to the shared types
+      module. No other type changes needed — existing AudioSegment,
+      SessionSummary, etc. already support audio-only data.
     acceptance_criteria:
-      - "AudioSegment interface exists in src/types/index.ts"
-      - "Type is exported and importable by other modules"
+      - "AppMode type exists in src/types/index.ts and is exported"
+      - "Type includes exactly 'screen-ocr' and 'audio-only' as values"
+      - "No breaking changes to existing type exports"
     estimate: "XS"
-    labels: ["audio-alignment"]
+    labels: ["audio-only"]
 
   - key_suffix: "T2"
     issue_type: "Story"
-    summary: "Create useAudioCapture hook for mic capture + speech-to-text"
+    summary: "Add mode state and conditional start/stop logic to App.tsx"
     description: >
-      New React hook that requests microphone access, instantiates the
-      Web Speech API (SpeechRecognition), and emits timestamped
-      AudioSegment objects via callback. Exposes startAudio(),
-      stopAudio(), isListening, and audioError.
+      Add mode state (default: 'screen-ocr') to App.tsx. In audio-only mode,
+      Start button begins audio capture without triggering screen share. Stop
+      button ends audio and generates summary from audio data alone. Session
+      start timestamp tracked independently for duration calculation. Mode
+      toggle disabled while a session is active.
     acceptance_criteria:
-      - "Microphone permission is requested when startAudio() is called"
-      - "Speech recognition runs continuously with interim results"
-      - "Final transcript segments are emitted as AudioSegment objects with timestamps"
-      - "If mic permission is denied, audioError is set and no crash occurs"
-      - "If SpeechRecognition is unavailable, audioError is set gracefully"
-      - "stopAudio() cleanly stops recognition and releases mic"
+      - "App has a mode state variable defaulting to 'screen-ocr'"
+      - "In audio-only mode, Start captures mic without screen share prompt"
+      - "In audio-only mode, Stop generates summary from audio segments"
+      - "Session duration is calculated correctly for audio-only sessions"
+      - "Mode cannot be changed while a session is active"
+      - "Screen+OCR mode behavior is completely unchanged"
     estimate: "S"
-    labels: ["audio-alignment"]
+    labels: ["audio-only"]
 
   - key_suffix: "T3"
     issue_type: "Story"
-    summary: "Wire audio capture into App.tsx alongside screen capture"
+    summary: "Add mode toggle and adaptive controls to Header"
     description: >
-      Integrate useAudioCapture into the main App component. Start audio
-      when screen sharing starts, stop when sharing stops. Collect
-      AudioSegment[] in state and pass to child components.
+      Add a segmented toggle in the header to switch between 'Screen+OCR'
+      and 'Audio-only' modes. Toggle is disabled during active sessions.
+      Start/Stop button labels adapt: "Start Sharing" / "Start Recording".
+      Slide count shown only in screen-ocr mode. Mic indicator shown in
+      audio-only mode when recording.
     acceptance_criteria:
-      - "Audio capture starts automatically when screen sharing begins"
-      - "Audio capture stops when screen sharing stops"
-      - "audioSegments state is maintained and passed to MainLayout and SummaryView"
-      - "App continues to function if audio capture fails (OCR-only fallback)"
+      - "Mode toggle visible in header with two options"
+      - "Toggle is disabled (greyed out) when a session is active"
+      - "Button reads 'Start Sharing' in screen-ocr mode, 'Start Recording' in audio-only"
+      - "Slide count badge hidden in audio-only mode"
+      - "Mic listening indicator shown in audio-only mode during recording"
     estimate: "S"
-    labels: ["audio-alignment"]
+    labels: ["audio-only"]
 
   - key_suffix: "T4"
     issue_type: "Task"
-    summary: "Create AudioSegmentItem UI component"
+    summary: "Create AudioOnlyPanel component"
     description: >
-      New component to render a single audio transcript segment. Visually
-      distinct from OCR items — uses audio/mic badge instead of slide badge.
-      Shows timestamp, transcript text, and final/interim indicator.
+      New visual component that replaces ScreenPanel when in audio-only mode.
+      Shows a centered pulsing microphone icon and status label:
+      "Listening..." when recording, "Ready to record" when idle.
     acceptance_criteria:
-      - "Component renders audio segment text with timestamp"
-      - "Visually distinguishable from OCR result items (different badge/color)"
-      - "Interim segments shown with a visual indicator (e.g., italic or muted)"
+      - "AudioOnlyPanel renders a mic icon with pulsing animation when active"
+      - "Shows 'Listening...' label when recording is active"
+      - "Shows 'Ready to record' label when idle"
+      - "Fills the same layout space as ScreenPanel"
     estimate: "XS"
-    labels: ["audio-alignment"]
+    labels: ["audio-only"]
 
   - key_suffix: "T5"
-    issue_type: "Story"
-    summary: "Interleave audio segments with OCR results in transcript panel"
+    issue_type: "Task"
+    summary: "Update MainLayout for mode-conditional panel rendering"
     description: >
-      Modify OCRPanel and OCRResultList to accept and display both OCR
-      results and audio segments, sorted by timestamp. Each entry type is
-      visually distinguishable.
+      MainLayout accepts mode prop. When mode is 'audio-only', renders
+      AudioOnlyPanel instead of ScreenPanel in the left column. The
+      transcript panel (right column) is always rendered.
     acceptance_criteria:
-      - "OCRPanel accepts audioSegments prop"
-      - "Results list interleaves OCR and audio items sorted by timestamp"
-      - "OCR items use existing styling; audio items use AudioSegmentItem"
-      - "List auto-scrolls to latest entry regardless of type"
-    estimate: "S"
-    labels: ["audio-alignment"]
+      - "AudioOnlyPanel shown in left column when mode is 'audio-only'"
+      - "ScreenPanel shown in left column when mode is 'screen-ocr'"
+      - "Transcript panel always visible in both modes"
+      - "No visual regression in screen-ocr mode"
+    estimate: "XS"
+    labels: ["audio-only"]
 
   - key_suffix: "T6"
     issue_type: "Task"
-    summary: "Update MainLayout to forward audioSegments to OCRPanel"
+    summary: "Add CSS for mode toggle and audio-only panel"
     description: >
-      Add audioSegments prop to MainLayout and pass through to OCRPanel.
+      Add styles for mode toggle segmented control, audio-only panel with
+      pulsing mic animation, and responsive adjustments.
     acceptance_criteria:
-      - "MainLayout accepts and forwards audioSegments prop"
-      - "No visual regression when audioSegments is empty"
+      - "Mode toggle styled as a segmented control with active state"
+      - "Disabled state visually distinct (greyed out)"
+      - "Audio-only panel has centered mic icon with pulse animation"
+      - "Responsive layout works on mobile viewports"
     estimate: "XS"
-    labels: ["audio-alignment"]
+    labels: ["audio-only"]
 
   - key_suffix: "T7"
-    issue_type: "Story"
-    summary: "Include audio transcript in session summary generation"
-    description: >
-      Modify useSummary to accept audioSegments, concatenate audio
-      transcript with OCR text for inference, and track audio-specific
-      stats (audioWordCount, audioSegmentCount).
-    acceptance_criteria:
-      - "generateSummary accepts audioSegments parameter"
-      - "Audio transcript text is included in inference input"
-      - "SessionSummary includes audioWordCount and audioSegmentCount"
-      - "Summary still works correctly with zero audio segments"
-    estimate: "S"
-    labels: ["audio-alignment"]
-
-  - key_suffix: "T8"
     issue_type: "Task"
-    summary: "Display audio stats and transcript in SummaryView"
+    summary: "Handle audio-only session summary edge cases"
     description: >
-      Show audio segment count, audio word count in the statistics
-      section. Add a collapsible section with the full audio transcript.
+      Verify and fix useSummary.generateSummary for the case where OCR
+      results are empty but audio segments exist. Ensure summary narrative
+      and stats make sense for audio-only sessions.
     acceptance_criteria:
-      - "Audio stats appear in the statistics grid when audio data exists"
-      - "Full audio transcript is available in a collapsible section"
-      - "No visual change when there is no audio data"
+      - "Summary generated correctly with zero OCR results and non-zero audio segments"
+      - "Duration calculated from audio-only session start time"
+      - "Narrative text makes sense without OCR context"
+      - "No error or 'no text captured' message when audio data exists"
     estimate: "XS"
-    labels: ["audio-alignment"]
-
-  - key_suffix: "T9"
-    issue_type: "Task"
-    summary: "Add mic status indicator to Header"
-    description: >
-      Show a mic icon in the header when audio capture is active.
-      Show a warning indicator if audio permission was denied.
-    acceptance_criteria:
-      - "Mic icon visible in header during active audio capture"
-      - "Warning shown if mic permission denied"
-      - "No indicator shown when not sharing"
-    estimate: "XS"
-    labels: ["audio-alignment"]
+    labels: ["audio-only"]

@@ -1,9 +1,9 @@
 gates:
   PM_INTENT:
     status: "approved"
-    by: "Aravind sethuraman"
+    by: "aravind"
     at: "2026-02-16T00:00:00-08:00"
-    notes: "Lets proceed with this"
+    notes: "i am the bloody pm"
   TL_EXECUTION:
     status: "pending"
     by: null
@@ -13,4 +13,4 @@ gates:
     status: "approved"
     by: "aravind"
     at: "2026-02-16T00:00:00-08:00"
-    notes: "looks ok to me"
+    notes: "ship-it"

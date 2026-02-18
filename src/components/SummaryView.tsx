@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { SessionSummary } from '../types'
+import { downloadMarkdown, copyToClipboard } from '../services/exportService'
 
 interface SummaryViewProps {
   summary: SessionSummary | null
@@ -6,170 +8,104 @@ interface SummaryViewProps {
 }
 
 export function SummaryView({ summary, onDismiss }: SummaryViewProps) {
+  const [copied, setCopied] = useState(false)
+  const [rawOpen, setRawOpen] = useState(false)
+
   if (!summary) return null
 
   const { inference } = summary
+  const totalWords = summary.wordCount + summary.audioWordCount
+
+  const handleCopy = async () => {
+    const ok = await copyToClipboard(summary)
+    if (ok) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  // Merge key sentences and action items into one insights list
+  const insights: { text: string; kind: 'point' | 'action' }[] = [
+    ...inference.keySentences.map(s => ({ text: s, kind: 'point' as const })),
+    ...inference.actionItems.map(a => ({ text: a, kind: 'action' as const })),
+  ]
 
   return (
     <div className="summary-overlay">
       <div className="summary-modal">
+        {/* Header with export actions */}
         <div className="summary-header">
           <h2>Session Summary</h2>
-          <button className="btn btn-dismiss" onClick={onDismiss}>
-            Dismiss
-          </button>
+          <div className="summary-header-actions">
+            <button className="btn btn-export" onClick={() => downloadMarkdown(summary)}>
+              Export .md
+            </button>
+            <button className="btn btn-copy" onClick={handleCopy}>
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <button className="btn btn-dismiss" onClick={onDismiss}>
+              Dismiss
+            </button>
+          </div>
         </div>
-        <div className="summary-content">
 
-          {/* AI Narrative */}
+        <div className="summary-content">
+          {/* Compact stats bar */}
+          <div className="summary-stats-bar">
+            <span>{summary.duration}</span>
+            <span className="stats-bar-sep">&middot;</span>
+            <span>{summary.slideCount} slide{summary.slideCount !== 1 ? 's' : ''}</span>
+            <span className="stats-bar-sep">&middot;</span>
+            <span>{totalWords} words</span>
+            {summary.audioSegmentCount > 0 && (
+              <>
+                <span className="stats-bar-sep">&middot;</span>
+                <span>{summary.audioSegmentCount} audio segments</span>
+              </>
+            )}
+          </div>
+
+          {/* AI narrative — hero element */}
           {inference.narrative && (
             <section className="summary-section narrative-section">
-              <h3>🧠 Inferred Summary</h3>
-              <div className="narrative-box">
-                {inference.narrative}
-              </div>
+              <div className="narrative-box">{inference.narrative}</div>
             </section>
           )}
 
-          {/* Statistics */}
-          <section className="summary-section">
-            <h3>📊 Statistics</h3>
-            <div className="summary-stats">
-              <div className="stat-item">
-                <span className="stat-value">{inference.contentTypeLabel.split(' ')[0]}</span>
-                <span className="stat-label">{inference.contentTypeLabel.split(' ').slice(1).join(' ')}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-value">{summary.slideCount}</span>
-                <span className="stat-label">Slides / Screens</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-value">{summary.totalCaptures}</span>
-                <span className="stat-label">Captures</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-value">{summary.wordCount}</span>
-                <span className="stat-label">Words</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-value">{summary.duration}</span>
-                <span className="stat-label">Duration</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-value">{summary.avgConfidence.toFixed(0)}%</span>
-                <span className="stat-label">Avg Confidence</span>
-              </div>
-              {summary.languages.length > 0 && (
-                <div className="stat-item">
-                  <span className="stat-value">{summary.languages.join(', ')}</span>
-                  <span className="stat-label">Languages</span>
-                </div>
-              )}
-              {summary.audioSegmentCount > 0 && (
-                <div className="stat-item">
-                  <span className="stat-value">{summary.audioSegmentCount}</span>
-                  <span className="stat-label">Audio Segments</span>
-                </div>
-              )}
-              {summary.audioWordCount > 0 && (
-                <div className="stat-item">
-                  <span className="stat-value">{summary.audioWordCount}</span>
-                  <span className="stat-label">Audio Words</span>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Headings / Structure detected */}
-          {inference.headings.length > 0 && (
+          {/* Key Insights */}
+          {insights.length > 0 && (
             <section className="summary-section">
-              <h3>📑 Headings Detected</h3>
-              <ol className="headings-list">
-                {inference.headings.map((h, i) => (
-                  <li key={i}>{h}</li>
-                ))}
-              </ol>
-            </section>
-          )}
-
-          {/* Action Items */}
-          {inference.actionItems.length > 0 && (
-            <section className="summary-section">
-              <h3>✅ Action Items</h3>
-              <ul className="action-items-list">
-                {inference.actionItems.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {/* Key Sentences */}
-          {inference.keySentences.length > 0 && (
-            <section className="summary-section">
-              <h3>💡 Key Points</h3>
-              <ul className="key-sentences-list">
-                {inference.keySentences.map((s, i) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {/* Keywords / Topics */}
-          {summary.keywords.length > 0 && (
-            <section className="summary-section">
-              <h3>🏷️ Key Topics</h3>
-              {inference.topicClusters.length > 1 ? (
-                <div className="topic-clusters">
-                  {inference.topicClusters.map((cluster, i) => (
-                    <div key={i} className="topic-cluster">
-                      {cluster.map((kw, j) => (
-                        <span key={j} className="keyword-tag">{kw}</span>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="keyword-tags">
-                  {summary.keywords.map((kw, i) => (
-                    <span key={i} className="keyword-tag">{kw}</span>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* URLs */}
-          {summary.urls.length > 0 && (
-            <section className="summary-section">
-              <h3>🔗 URLs Found ({summary.urls.length})</h3>
-              <ul className="url-list">
-                {summary.urls.map((url, i) => (
-                  <li key={i}>
-                    <a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
+              <h3>Key Insights</h3>
+              <ul className="insights-list">
+                {insights.map((item, i) => (
+                  <li key={i} className={item.kind === 'action' ? 'insight-action' : 'insight-point'}>
+                    {item.text}
                   </li>
                 ))}
               </ul>
             </section>
           )}
 
-          {/* Per-slide breakdown */}
+          {/* Slide Timeline */}
           {summary.slides.length > 0 && (
             <section className="summary-section">
-              <h3>📄 Slide Breakdown</h3>
-              <div className="slide-breakdown">
+              <h3>Slide Timeline</h3>
+              <div className="summary-timeline">
                 {summary.slides.map(slide => (
-                  <details key={slide.slideNumber} className="slide-detail">
-                    <summary>
+                  <div key={slide.slideNumber} className="summary-timeline-card">
+                    <div className="summary-timeline-card-header">
                       <strong>Slide {slide.slideNumber}</strong>
                       <span className="slide-meta">
                         {slide.captureCount} capture{slide.captureCount !== 1 ? 's' : ''}
-                        {slide.keywords.length > 0 && ` · ${slide.keywords.slice(0, 3).join(', ')}`}
-                        {slide.urls.length > 0 && ` · ${slide.urls.length} URL${slide.urls.length !== 1 ? 's' : ''}`}
                       </span>
-                    </summary>
+                    </div>
                     <pre className="slide-text">{slide.text}</pre>
+                    {slide.audioText && (
+                      <div className="summary-timeline-audio">
+                        <span className="audio-badge">Audio</span>
+                        <span>{slide.audioText}</span>
+                      </div>
+                    )}
                     {slide.urls.length > 0 && (
                       <div className="slide-urls">
                         {slide.urls.map((url, i) => (
@@ -177,27 +113,46 @@ export function SummaryView({ summary, onDismiss }: SummaryViewProps) {
                         ))}
                       </div>
                     )}
-                  </details>
+                  </div>
                 ))}
               </div>
             </section>
           )}
 
-          {/* Audio Transcript */}
-          {summary.audioTranscript && summary.audioTranscript.length > 0 && (
-            <section className="summary-section">
-              <h3>🎤 Audio Transcript</h3>
-              <details className="audio-transcript-detail">
-                <summary>{summary.audioSegmentCount} segment{summary.audioSegmentCount !== 1 ? 's' : ''}, {summary.audioWordCount} words</summary>
-                <pre className="full-text">{summary.audioTranscript}</pre>
-              </details>
-            </section>
-          )}
-
-          {/* Full captured text */}
-          <section className="summary-section">
-            <h3>📝 Full Captured Text</h3>
-            <pre className="full-text">{summary.fullText}</pre>
+          {/* Collapsible Raw Data */}
+          <section className="summary-section raw-data-section">
+            <button
+              className="raw-data-toggle"
+              onClick={() => setRawOpen(o => !o)}
+            >
+              {rawOpen ? 'Hide' : 'Show'} Raw Data
+            </button>
+            {rawOpen && (
+              <div className="raw-data-content">
+                {summary.urls.length > 0 && (
+                  <div className="raw-data-block">
+                    <h4>URLs ({summary.urls.length})</h4>
+                    <ul className="url-list">
+                      {summary.urls.map((url, i) => (
+                        <li key={i}>
+                          <a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {summary.audioTranscript && (
+                  <div className="raw-data-block">
+                    <h4>Full Audio Transcript</h4>
+                    <pre className="full-text">{summary.audioTranscript}</pre>
+                  </div>
+                )}
+                <div className="raw-data-block">
+                  <h4>Full Captured Text</h4>
+                  <pre className="full-text">{summary.fullText}</pre>
+                </div>
+              </div>
+            )}
           </section>
         </div>
       </div>

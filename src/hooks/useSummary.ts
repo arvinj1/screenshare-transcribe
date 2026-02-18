@@ -20,7 +20,7 @@ function formatDuration(ms: number): string {
   return `${seconds}s`
 }
 
-function buildSlides(results: OCRResult[]): SlideSummary[] {
+function buildSlides(results: OCRResult[], audioSegments: AudioSegment[] = []): SlideSummary[] {
   const slideMap = new Map<number, OCRResult[]>()
 
   for (const r of results) {
@@ -29,8 +29,14 @@ function buildSlides(results: OCRResult[]): SlideSummary[] {
     slideMap.set(r.slideNumber, existing)
   }
 
+  // Sort slides by number to compute timestamp ranges
+  const slideNumbers = [...slideMap.keys()].sort((a, b) => a - b)
+
   const slides: SlideSummary[] = []
-  for (const [slideNumber, slideResults] of slideMap) {
+  for (let i = 0; i < slideNumbers.length; i++) {
+    const slideNumber = slideNumbers[i]
+    const slideResults = slideMap.get(slideNumber)!
+
     // Use the longest text capture as representative for the slide
     const bestCapture = slideResults.reduce((best, r) =>
       r.text.length > best.text.length ? r : best
@@ -38,16 +44,44 @@ function buildSlides(results: OCRResult[]): SlideSummary[] {
     const allUrls = [...new Set(slideResults.flatMap(r => r.urls))]
     const keywords = extractKeywords(bestCapture.text, 5)
 
+    // Compute time range for this slide
+    const slideStart = Math.min(...slideResults.map(r => r.timestamp))
+    const slideEnd = i < slideNumbers.length - 1
+      ? Math.min(...slideMap.get(slideNumbers[i + 1])!.map(r => r.timestamp))
+      : Infinity
+
+    // Gather audio segments that fall within this slide's time range
+    const finalSegments = audioSegments.filter(s => s.isFinal)
+    const slideAudio = finalSegments
+      .filter(s => s.timestamp >= slideStart && s.timestamp < slideEnd)
+      .map(s => s.text)
+      .join(' ')
+      .trim()
+
     slides.push({
       slideNumber,
       captureCount: slideResults.length,
       text: bestCapture.text,
+      audioText: slideAudio,
       keywords,
       urls: allUrls,
     })
   }
 
-  return slides.sort((a, b) => a.slideNumber - b.slideNumber)
+  // Assign any audio that occurred before the first slide
+  if (slides.length > 0 && results.length > 0) {
+    const firstSlideStart = Math.min(...results.map(r => r.timestamp))
+    const preAudio = audioSegments
+      .filter(s => s.isFinal && s.timestamp < firstSlideStart)
+      .map(s => s.text)
+      .join(' ')
+      .trim()
+    if (preAudio) {
+      slides[0].audioText = preAudio + (slides[0].audioText ? ' ' + slides[0].audioText : '')
+    }
+  }
+
+  return slides
 }
 
 export function useSummary(): UseSummaryReturn {
@@ -93,7 +127,7 @@ export function useSummary(): UseSummaryReturn {
       return
     }
 
-    const slides = buildSlides(results)
+    const slides = buildSlides(results, audioSegments)
     const slideCount = slides.length
 
     // Use deduplicated text (best capture per slide) for the full text

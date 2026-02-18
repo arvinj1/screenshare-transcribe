@@ -2,44 +2,45 @@
 
 ---
 
-## Epic: Add audio alignment to screenshare transcription pipeline
+## Epic: Audio-only transcription mode
 
 ### Goal
-Pair real-time audio transcription with the existing OCR pipeline so users get a time-synced view of what was shown + what was said.
+Let users capture and transcribe microphone audio without requiring screen sharing — a standalone "Audio-only" mode alongside the existing Screen+OCR mode.
 
 ### Scope
 
 **In scope:**
-- Capture microphone audio alongside screen share
-- Real-time speech-to-text via Web Speech API (zero new dependencies)
-- Timestamped audio segments interleaved with OCR results
-- Summary view incorporates both OCR and audio data
-- Graceful fallback to OCR-only if mic denied or API unavailable
+- Mode toggle: "Screen+OCR" (default) or "Audio-only"
+- Audio-only mode: mic capture only, no screen share prompt
+- Live speech-to-text in transcript panel via Web Speech API
+- Screen panel replaced with pulsing mic indicator
+- Adaptive button labels ("Start Sharing" vs "Start Recording")
+- Session summary from audio transcript alone
+- Mode toggle disabled during active sessions
 
 **Out of scope:**
+- Cloud STT / backend services (Web Speech API only for MVP)
+- Simultaneous modes (mutually exclusive)
+- Audio file upload / import
 - Speaker diarization
-- Video recording / playback
-- Server-side processing
-- Offline transcription (future: Whisper WASM)
+- Rewriting existing Screen+OCR mode
 
-### Breakdown (9 tasks)
+### Breakdown (7 tasks)
 
 | ID | Summary | Size | Type |
 |----|---------|------|------|
-| T1 | Add AudioSegment type definition | XS | Task |
-| T2 | Create useAudioCapture hook | S | Story |
-| T3 | Wire audio capture into App.tsx | S | Story |
-| T4 | Create AudioSegmentItem component | XS | Task |
-| T5 | Interleave audio + OCR in transcript panel | S | Story |
-| T6 | Update MainLayout to forward audioSegments | XS | Task |
-| T7 | Include audio in summary generation | S | Story |
-| T8 | Display audio stats in SummaryView | XS | Task |
-| T9 | Add mic status indicator to Header | XS | Task |
+| T1 | Add AppMode type to shared types | XS | Task |
+| T2 | Add mode state and conditional start/stop logic to App.tsx | S | Story |
+| T3 | Add mode toggle and adaptive controls to Header | S | Story |
+| T4 | Create AudioOnlyPanel component | XS | Task |
+| T5 | Update MainLayout for mode-conditional rendering | XS | Task |
+| T6 | Add CSS for mode toggle and audio-only panel | XS | Task |
+| T7 | Handle audio-only session summary edge cases | XS | Task |
 
 ### Risks
-- Web Speech API sends audio to Google servers in Chrome (acceptable for MVP; documented)
-- Chromium-only — matches existing browser target
-- Interim results can be noisy — only final results stored; interim shown transiently
+- Web Speech API sends audio to Google servers in Chrome (same constraint as existing audio pipeline)
+- Audio-only summary is sparser than Screen+OCR (acceptable for MVP)
+- No visual feedback if speech recognition silently stops (mitigated by auto-restart + isListening state)
 
 ### Approved by
-- **PM_INTENT:** Aravind Sethuraman — "Lets proceed with this"
+- **PM_INTENT:** aravind — "i am the bloody pm"
