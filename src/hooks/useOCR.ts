@@ -34,7 +34,7 @@ export function useOCR(): UseOCRReturn {
       terminateOCR()
       initializedRef.current = false
     }
-  }, [startSession])
+  }, [])
 
   const startSession = useCallback(async () => {
     if (initializedRef.current) return
@@ -46,7 +46,7 @@ export function useOCR(): UseOCRReturn {
     if (!initializedRef.current) return
     await terminateOCR()
     initializedRef.current = false
-  }, [])
+  }, [startSession])
 
   const processFrame = useCallback(async (canvas: HTMLCanvasElement) => {
     if (!initializedRef.current) {
