@@ -11,7 +11,7 @@ function App() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [videoReady, setVideoReady] = useState(false)
   const { mediaStream, isSharing, error, startCapture, stopCapture } = useScreenCapture()
-  const { results, isProcessing, slideCount, sessionStart, processFrame, clearResults } = useOCR()
+  const { results, isProcessing, slideCount, sessionStart, startSession, stopSession, processFrame, clearResults } = useOCR()
   const { summary, generateSummary, clearSummary } = useSummary()
 
   // Get video element reference from DOM after render and wait for it to be ready
@@ -42,10 +42,22 @@ function App() {
     onFrame: processFrame,
   })
 
+  const handleStart = useCallback(async () => {
+    await startCapture()
+    await startSession()
+  }, [startCapture, startSession])
+
   const handleStop = useCallback(() => {
     generateSummary(results, sessionStart)
+    void stopSession()
     stopCapture()
-  }, [generateSummary, results, sessionStart, stopCapture])
+  }, [generateSummary, results, sessionStart, stopCapture, stopSession])
+
+  useEffect(() => {
+    if (!isSharing) {
+      void stopSession()
+    }
+  }, [isSharing, stopSession])
 
   const handleDismissSummary = useCallback(() => {
     clearSummary()
@@ -57,7 +69,7 @@ function App() {
       <Header
         isSharing={isSharing}
         slideCount={slideCount}
-        onStart={startCapture}
+        onStart={handleStart}
         onStop={handleStop}
       />
 

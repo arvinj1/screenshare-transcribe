@@ -14,6 +14,8 @@ interface UseOCRReturn {
   isProcessing: boolean
   slideCount: number
   sessionStart: number | null
+  startSession: () => Promise<void>
+  stopSession: () => Promise<void>
   processFrame: (canvas: HTMLCanvasElement) => Promise<void>
   clearResults: () => void
 }
@@ -28,20 +30,29 @@ export function useOCR(): UseOCRReturn {
   const currentSlideRef = useRef(0)
 
   useEffect(() => {
-    const init = async () => {
-      if (!initializedRef.current) {
-        initializedRef.current = true
-        await initializeOCR()
-      }
-    }
-    init()
-
     return () => {
       terminateOCR()
+      initializedRef.current = false
     }
+  }, [startSession])
+
+  const startSession = useCallback(async () => {
+    if (initializedRef.current) return
+    await initializeOCR()
+    initializedRef.current = true
+  }, [])
+
+  const stopSession = useCallback(async () => {
+    if (!initializedRef.current) return
+    await terminateOCR()
+    initializedRef.current = false
   }, [])
 
   const processFrame = useCallback(async (canvas: HTMLCanvasElement) => {
+    if (!initializedRef.current) {
+      await startSession()
+    }
+
     setIsProcessing(true)
     try {
       const { text: rawText, confidence } = await recognizeImage(canvas)
@@ -101,6 +112,8 @@ export function useOCR(): UseOCRReturn {
     isProcessing,
     slideCount,
     sessionStart,
+    startSession,
+    stopSession,
     processFrame,
     clearResults,
   }

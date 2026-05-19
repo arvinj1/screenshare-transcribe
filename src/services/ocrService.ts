@@ -1,33 +1,70 @@
-import { createWorker, Worker } from 'tesseract.js'
+import { runtimeConfig } from '../config/runtime'
+import { BackendOCRProvider } from './ocrProviders/backendOCRProvider'
+import { LocalTesseractProvider } from './ocrProviders/localTesseractProvider'
+import type { OCRInput, OCRProvider, OCRRecognitionResult } from './ocrProviders/types'
 
-let worker: Worker | null = null
+let provider: OCRProvider | null = null
+let usingLegacyFallback = false
 
-export async function initializeOCR(): Promise<void> {
-  if (worker) return
-
-  worker = await createWorker('eng', 1, {
-    logger: () => {},
-  })
+function createPrimaryProvider(): OCRProvider {
+  return runtimeConfig.ocr.backendEnabled
+    ? new BackendOCRProvider()
+    : new LocalTesseractProvider()
 }
 
-export async function recognizeImage(
-  imageData: ImageData | HTMLCanvasElement | string
-): Promise<{ text: string; confidence: number }> {
-  if (!worker) {
-    await initializeOCR()
+function createLegacyProvider(): OCRProvider {
+  return new LocalTesseractProvider()
+}
+
+async function getProvider(): Promise<OCRProvider> {
+  if (!provider) {
+    provider = createPrimaryProvider()
+    await provider.initialize()
+  }
+  return provider
+}
+
+async function fallbackToLegacyProvider(error: unknown): Promise<OCRProvider> {
+  if (!runtimeConfig.ocr.backendEnabled || !runtimeConfig.ocr.legacyFallbackEnabled) {
+    throw error
+  }
+  if (usingLegacyFallback) {
+    throw error
   }
 
-  const result = await worker!.recognize(imageData)
+  usingLegacyFallback = true
+  try {
+    await provider?.terminate()
+  } catch {
+    // Ignore cleanup failures during fallback switch.
+  }
 
-  return {
-    text: result.data.text.trim(),
-    confidence: result.data.confidence,
+  provider = createLegacyProvider()
+  await provider.initialize()
+  return provider
+}
+
+export async function initializeOCR(): Promise<void> {
+  try {
+    await getProvider()
+  } catch (error) {
+    await fallbackToLegacyProvider(error)
+  }
+}
+
+export async function recognizeImage(imageData: OCRInput): Promise<OCRRecognitionResult> {
+  let currentProvider = await getProvider()
+  try {
+    return await currentProvider.recognizeImage(imageData)
+  } catch (error) {
+    currentProvider = await fallbackToLegacyProvider(error)
+    return currentProvider.recognizeImage(imageData)
   }
 }
 
 export async function terminateOCR(): Promise<void> {
-  if (worker) {
-    await worker.terminate()
-    worker = null
+  if (provider) {
+    await provider.terminate()
+    provider = null
   }
 }
