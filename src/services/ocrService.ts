@@ -18,6 +18,7 @@ function createLegacyProvider(): OCRProvider {
 
 async function getProvider(): Promise<OCRProvider> {
   if (!provider) {
+    usingLegacyFallback = false
     provider = createPrimaryProvider()
     await provider.initialize()
   }
@@ -58,7 +59,7 @@ export async function recognizeImage(imageData: OCRInput): Promise<OCRRecognitio
     return await currentProvider.recognizeImage(imageData)
   } catch (error) {
     currentProvider = await fallbackToLegacyProvider(error)
-    return currentProvider.recognizeImage(imageData)
+    return await currentProvider.recognizeImage(imageData)
   }
 }
 
@@ -67,4 +68,5 @@ export async function terminateOCR(): Promise<void> {
     await provider.terminate()
     provider = null
   }
+  usingLegacyFallback = false
 }

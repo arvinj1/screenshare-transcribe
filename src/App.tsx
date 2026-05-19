@@ -49,12 +49,14 @@ function App() {
 
   const handleStop = useCallback(() => {
     generateSummary(results, sessionStart)
+    // Session stop is best-effort cleanup and should not block UI stop flow.
     void stopSession()
     stopCapture()
   }, [generateSummary, results, sessionStart, stopCapture, stopSession])
 
   useEffect(() => {
     if (!isSharing) {
+      // Browser-level share end can happen outside our stop handler.
       void stopSession()
     }
   }, [isSharing, stopSession])

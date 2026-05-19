@@ -18,6 +18,8 @@ interface PendingResult {
   reject: (reason?: unknown) => void
 }
 
+const TERMINATION_MAX_RETRIES = 1
+
 function apiUrl(path: string): string {
   if (!runtimeConfig.ocr.apiBaseUrl) return path
   return `${runtimeConfig.ocr.apiBaseUrl.replace(/\/+$/, '')}${path}`
@@ -68,7 +70,6 @@ export class BackendOCRProvider implements OCRProvider {
   private sessionId: string | null = null
   private eventSource: EventSource | null = null
   private pendingResults = new Map<string, PendingResult>()
-  private disposed = false
 
   private async fetchWithTimeout(
     url: string,
@@ -76,8 +77,9 @@ export class BackendOCRProvider implements OCRProvider {
     retries = runtimeConfig.ocr.maxRetries
   ): Promise<Response> {
     let lastError: unknown
+    const maxAttempts = retries + 1
 
-    for (let attempt = 0; attempt <= retries; attempt += 1) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       const controller = new AbortController()
       const timeoutId = window.setTimeout(() => controller.abort(), runtimeConfig.ocr.requestTimeoutMs)
 
@@ -153,7 +155,7 @@ export class BackendOCRProvider implements OCRProvider {
   }
 
   async initialize(): Promise<void> {
-    if (this.sessionId || this.disposed) return
+    if (this.sessionId) return
 
     const response = await this.fetchWithTimeout(apiUrl('/api/ocr/sessions'), {
       method: 'POST',
@@ -237,14 +239,12 @@ export class BackendOCRProvider implements OCRProvider {
         await this.fetchWithTimeout(apiUrl(`/api/ocr/sessions/${this.sessionId}`), {
           method: 'DELETE',
           headers: createAuthHeaders(),
-        }, 0)
+        }, TERMINATION_MAX_RETRIES)
       } catch {
         // Best effort cleanup.
       }
     }
 
     this.sessionId = null
-    this.disposed = false
   }
 }
-

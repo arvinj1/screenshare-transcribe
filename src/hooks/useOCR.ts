@@ -26,6 +26,7 @@ export function useOCR(): UseOCRReturn {
   const [slideCount, setSlideCount] = useState(0)
   const [sessionStart, setSessionStart] = useState<number | null>(null)
   const initializedRef = useRef(false)
+  const initPromiseRef = useRef<Promise<void> | null>(null)
   const lastTextRef = useRef<string>('')
   const currentSlideRef = useRef(0)
 
@@ -38,18 +39,29 @@ export function useOCR(): UseOCRReturn {
 
   const startSession = useCallback(async () => {
     if (initializedRef.current) return
-    await initializeOCR()
-    initializedRef.current = true
+    if (!initPromiseRef.current) {
+      initPromiseRef.current = (async () => {
+        await initializeOCR()
+        initializedRef.current = true
+      })().finally(() => {
+        initPromiseRef.current = null
+      })
+    }
+    await initPromiseRef.current
   }, [])
 
   const stopSession = useCallback(async () => {
+    if (initPromiseRef.current) {
+      await initPromiseRef.current
+    }
     if (!initializedRef.current) return
     await terminateOCR()
     initializedRef.current = false
-  }, [startSession])
+  }, [])
 
   const processFrame = useCallback(async (canvas: HTMLCanvasElement) => {
     if (!initializedRef.current) {
+      // startSession is concurrency-safe and shares a single initialization promise.
       await startSession()
     }
 

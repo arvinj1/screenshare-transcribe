@@ -31,4 +31,3 @@ export const runtimeConfig = {
     redactLogs: toBool(import.meta.env.VITE_REDACT_OCR_LOGS, true),
   },
 } as const
-

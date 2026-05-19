@@ -11,4 +11,3 @@ export interface OCRProvider {
   recognizeImage(imageData: OCRInput): Promise<OCRRecognitionResult>
   terminate(): Promise<void>
 }
-

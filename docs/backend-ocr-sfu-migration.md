@@ -83,4 +83,3 @@ This app now supports an API-backed OCR path with open-source SFU metadata and o
 - Apply rate limits per user/session.
 - Enforce TLS for signaling, stream transport, and OCR APIs.
 - Redact OCR payloads in logs when policy requires it.
-
