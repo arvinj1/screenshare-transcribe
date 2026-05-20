@@ -59,7 +59,7 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
             <ul>
               <li>Share a single <strong>window or tab</strong> rather than the whole monitor if possible</li>
               <li>Use <strong>larger fonts</strong> and high-contrast themes in the content you're capturing</li>
-              <li>Avoid very fast scrolling — OCR captures at regular intervals</li>
+              <li>Avoid very fast scrolling - OCR captures at regular intervals</li>
               <li>OCR works best with printed text; handwriting or stylized fonts may be imperfect</li>
             </ul>
           </div>

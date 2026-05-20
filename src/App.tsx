@@ -33,6 +33,9 @@ function App() {
   const [durationWarning, setDurationWarning] = useState(false)
   const sessionStartRef = useRef<number | null>(null)
   const durationTimerRef = useRef<number | null>(null)
+  // Capture results and sessionStart at stop-time so the summary effect has stable data
+  const pendingResultsRef = useRef<typeof results>([])
+  const pendingSessionStartRef = useRef<number | null>(null)
 
   const { mediaStream, isSharing, error, startCapture, stopCapture } = useScreenCapture()
   const { results, isProcessing, slideCount, sessionStart, startSession, stopSession, processFrame, clearResults } = useOCR()
@@ -100,6 +103,10 @@ function App() {
   }, [startCapture, startSession, clearResults])
 
   const handleStop = useCallback(() => {
+    // Snapshot the current results and sessionStart into refs before async state
+    // changes occur, so the summary effect below has consistent data.
+    pendingResultsRef.current = results
+    pendingSessionStartRef.current = sessionStart
     generateSummary(results, sessionStart)
     // Session stop is best-effort cleanup and should not block UI stop flow.
     void stopSession()
@@ -113,28 +120,30 @@ function App() {
     }
   }, [isSharing, stopSession])
 
-  // Build SavedSession when summary is generated
+  // Build SavedSession when summary is generated, using the snapshotted stop-time data
   useEffect(() => {
-    if (summary && results.length > 0) {
-      const ts = sessionStart ?? Date.now()
-      const durationMs = sessionStart ? Date.now() - sessionStart : 0
-      const session: SavedSession = {
-        id: crypto.randomUUID(),
-        title: buildSessionTitle(summary.keywords, ts),
-        createdAt: ts,
-        updatedAt: Date.now(),
-        duration: summary.duration,
-        durationMs,
-        slideCount: summary.slideCount,
-        totalCaptures: summary.totalCaptures,
-        avgConfidence: summary.avgConfidence,
-        keywords: summary.keywords,
-        summary,
-        results,
-      }
-      setCurrentSavedSession(session)
+    if (!summary) return
+    const snapshotResults = pendingResultsRef.current
+    const snapshotStart = pendingSessionStartRef.current
+    if (snapshotResults.length === 0) return
+    const ts = snapshotStart ?? Date.now()
+    const durationMs = snapshotStart ? Date.now() - snapshotStart : 0
+    const session: SavedSession = {
+      id: crypto.randomUUID(),
+      title: buildSessionTitle(summary.keywords, ts),
+      createdAt: ts,
+      updatedAt: Date.now(),
+      duration: summary.duration,
+      durationMs,
+      slideCount: summary.slideCount,
+      totalCaptures: summary.totalCaptures,
+      avgConfidence: summary.avgConfidence,
+      keywords: summary.keywords,
+      summary,
+      results: snapshotResults,
     }
-  }, [summary]) // eslint-disable-line react-hooks/exhaustive-deps
+    setCurrentSavedSession(session)
+  }, [summary])
 
   const handleAutoSave = useCallback(async () => {
     if (!currentSavedSession) return
@@ -142,12 +151,12 @@ function App() {
     setIsSaved(true)
   }, [currentSavedSession, saveSession])
 
-  // Auto-save on session end if we have results
+  // Auto-save whenever a new session is ready
   useEffect(() => {
     if (currentSavedSession && !isSaved) {
       void handleAutoSave()
     }
-  }, [currentSavedSession]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentSavedSession, isSaved, handleAutoSave])
 
   const handleDismissSummary = useCallback(() => {
     clearSummary()
@@ -183,7 +192,7 @@ function App() {
 
       {durationWarning && isSharing && (
         <div className="warning-banner">
-          ⚠️ Long session detected (&gt;30 min). Consider stopping soon to keep memory usage manageable.
+          ⚠️ Long session detected (30+ min). Consider stopping soon to keep memory usage manageable.
           <button className="banner-dismiss" onClick={() => setDurationWarning(false)}>✕</button>
         </div>
       )}

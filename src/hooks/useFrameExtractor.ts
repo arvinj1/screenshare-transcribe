@@ -20,6 +20,8 @@ export function useFrameExtractor(
 
   // Keep a ref in sync so the interval callback always sees the latest value
   // without causing the effect to re-run on every processing toggle.
+  // The ref pattern is safe here: we only skip frames based on isProcessing,
+  // so a single missed read at interval boundary has no observable side-effect.
   useEffect(() => {
     isProcessingRef.current = isProcessing
   }, [isProcessing])
