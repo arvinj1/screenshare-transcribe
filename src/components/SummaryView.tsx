@@ -1,10 +1,15 @@
-import type { SessionSummary, OCRResult } from '../types'
+import { useState } from 'react'
+import type { SessionSummary, OCRResult, SavedSession } from '../types'
 import { TopicClusterView } from './TopicClusterView'
+import { downloadMarkdown, downloadJSON, copyMarkdownToClipboard } from '../services/sessionExport'
 
 interface SummaryViewProps {
   summary: SessionSummary | null
   results: OCRResult[]
+  savedSession: SavedSession | null
   onDismiss: () => void
+  onSave?: () => Promise<void>
+  isSaved?: boolean
 }
 
 function ConfidenceHistogram({ results }: { results: OCRResult[] }) {
@@ -52,8 +57,33 @@ function EntityCount({ label, count }: { label: string; count: number }) {
   )
 }
 
-export function SummaryView({ summary, results, onDismiss }: SummaryViewProps) {
+export function SummaryView({ summary, results, savedSession, onDismiss, onSave, isSaved }: SummaryViewProps) {
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle')
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+
   if (!summary) return null
+
+  const handleCopy = async () => {
+    if (!savedSession) return
+    try {
+      await copyMarkdownToClipboard(savedSession)
+      setCopyStatus('copied')
+      setTimeout(() => setCopyStatus('idle'), 2000)
+    } catch {
+      // clipboard unavailable
+    }
+  }
+
+  const handleSave = async () => {
+    if (!onSave) return
+    setSaveStatus('saving')
+    try {
+      await onSave()
+      setSaveStatus('saved')
+    } catch {
+      setSaveStatus('idle')
+    }
+  }
 
   const { inference } = summary
   const hasEmails = summary.emails.length > 0
@@ -68,9 +98,37 @@ export function SummaryView({ summary, results, onDismiss }: SummaryViewProps) {
       <div className="summary-modal">
         <div className="summary-header">
           <h2>Session Summary</h2>
-          <button className="btn btn-dismiss" onClick={onDismiss}>
-            Dismiss
-          </button>
+          <div className="summary-header-actions">
+            {savedSession && (
+              <>
+                <button className="btn btn-sm btn-secondary" onClick={() => downloadMarkdown(savedSession)} title="Download as Markdown">
+                  ⬇ MD
+                </button>
+                <button className="btn btn-sm btn-secondary" onClick={() => downloadJSON(savedSession)} title="Download as JSON">
+                  ⬇ JSON
+                </button>
+                <button className="btn btn-sm btn-secondary" onClick={handleCopy} title="Copy Markdown to clipboard">
+                  {copyStatus === 'copied' ? '✓ Copied' : '📋 Copy MD'}
+                </button>
+              </>
+            )}
+            {onSave && !isSaved && (
+              <button
+                className="btn btn-sm btn-save"
+                onClick={handleSave}
+                disabled={saveStatus === 'saving'}
+                title="Save to history"
+              >
+                {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? '✓ Saved' : '💾 Save'}
+              </button>
+            )}
+            {isSaved && (
+              <span className="saved-badge">✓ Saved</span>
+            )}
+            <button className="btn btn-dismiss" onClick={onDismiss}>
+              Dismiss
+            </button>
+          </div>
         </div>
         <div className="summary-content">
 

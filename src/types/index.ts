@@ -73,3 +73,18 @@ export interface AppState {
   summary: SessionSummary | null
   error: string | null
 }
+
+export interface SavedSession {
+  id: string
+  title: string
+  createdAt: number
+  updatedAt: number
+  duration: string
+  durationMs: number
+  slideCount: number
+  totalCaptures: number
+  avgConfidence: number
+  keywords: string[]
+  summary: SessionSummary
+  results: OCRResult[]
+}
