@@ -49,7 +49,11 @@ function SessionCard({ session, onOpen, onDelete, onRename }: SessionCardProps) 
   const handleRename = async () => {
     const trimmed = editTitle.trim()
     if (trimmed && trimmed !== session.title) {
-      await onRename(session.id, trimmed)
+      try {
+        await onRename(session.id, trimmed)
+      } catch {
+        setEditTitle(session.title) // revert on error
+      }
     }
     setIsEditing(false)
   }

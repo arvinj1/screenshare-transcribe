@@ -1,7 +1,8 @@
 import type { SavedSession } from '../types'
 
 function escapeMarkdown(text: string): string {
-  return text.replace(/([\\`*_{}[\]<>#+\-.!|])/g, '\\$1')
+  // Escape Markdown special characters; handle backslash first to avoid double-escaping
+  return text.replace(/\\/g, '\\\\').replace(/([`*_{}[\]<>()#+\-.!|])/g, '\\$1')
 }
 
 function formatDate(ts: number): string {
@@ -192,13 +193,16 @@ function slugify(title: string): string {
 
 export function downloadMarkdown(session: SavedSession): void {
   const content = buildMarkdown(session)
-  const filename = `${slugify(session.title)}-${new Date(session.createdAt).toISOString().slice(0, 10)}.md`
+  // Include a short ID suffix to avoid collisions between same-title same-day sessions
+  const idSuffix = session.id.slice(0, 6)
+  const filename = `${slugify(session.title)}-${new Date(session.createdAt).toISOString().slice(0, 10)}-${idSuffix}.md`
   downloadFile(content, filename, 'text/markdown;charset=utf-8')
 }
 
 export function downloadJSON(session: SavedSession): void {
   const content = buildJSON(session)
-  const filename = `${slugify(session.title)}-${new Date(session.createdAt).toISOString().slice(0, 10)}.json`
+  const idSuffix = session.id.slice(0, 6)
+  const filename = `${slugify(session.title)}-${new Date(session.createdAt).toISOString().slice(0, 10)}-${idSuffix}.json`
   downloadFile(content, filename, 'application/json;charset=utf-8')
 }
 

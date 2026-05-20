@@ -16,11 +16,23 @@ const SESSION_DURATION_WARN_MS = 30 * 60 * 1000
 
 function buildSessionTitle(keywords: string[], timestamp: number): string {
   if (keywords.length > 0) {
-    return keywords.slice(0, 3).map(k => k.charAt(0).toUpperCase() + k.slice(1)).join(' · ')
+    const title = keywords.slice(0, 3).map(k => k.charAt(0).toUpperCase() + k.slice(1)).join(' · ')
+    return title.length > 60 ? title.slice(0, 57) + '…' : title
   }
   return `Session ${new Date(timestamp).toLocaleString(undefined, {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   })}`
+}
+
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  // Fallback for environments without crypto.randomUUID (Safari < 15.4)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+  })
 }
 
 function App() {
@@ -33,7 +45,11 @@ function App() {
   const [durationWarning, setDurationWarning] = useState(false)
   const sessionStartRef = useRef<number | null>(null)
   const durationTimerRef = useRef<number | null>(null)
-  // Capture results and sessionStart at stop-time so the summary effect has stable data
+  // Snapshot results/sessionStart at stop-time into refs.
+  // generateSummary is synchronous (just calls setSummary), but the resulting
+  // state update is async. By the time the useEffect below fires on the new
+  // summary value, React may have already re-rendered with cleared results.
+  // Reading from refs ensures the summary effect always sees the stop-time data.
   const pendingResultsRef = useRef<typeof results>([])
   const pendingSessionStartRef = useRef<number | null>(null)
 
@@ -129,7 +145,7 @@ function App() {
     const ts = snapshotStart ?? Date.now()
     const durationMs = snapshotStart ? Date.now() - snapshotStart : 0
     const session: SavedSession = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       title: buildSessionTitle(summary.keywords, ts),
       createdAt: ts,
       updatedAt: Date.now(),
