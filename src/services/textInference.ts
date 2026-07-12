@@ -214,47 +214,101 @@ function extractiveSummarize(text: string, maxSentences = 5): string[] {
 // ─── Topic Clustering ────────────────────────────────────────────
 
 /**
- * Group keywords into rough topic clusters using co-occurrence.
+ * Group keywords into semantic topic clusters using enhanced co-occurrence
+ * with frequency weighting and cluster quality scoring.
  */
 function clusterTopics(text: string, keywords: string[]): string[][] {
   if (keywords.length < 2) return keywords.length ? [keywords] : []
 
   const sentences = text.toLowerCase().split(/[.!?\n]+/).filter(s => s.length > 10)
-  const cooccurrence = new Map<string, Set<string>>()
+
+  // Build weighted co-occurrence matrix
+  const cooccurrence = new Map<string, Map<string, number>>()
+  const keywordFreq = new Map<string, number>()
 
   for (const kw of keywords) {
-    cooccurrence.set(kw, new Set())
+    cooccurrence.set(kw, new Map())
+    keywordFreq.set(kw, 0)
   }
 
+  // Count co-occurrences with frequency weighting
   for (const sentence of sentences) {
     const present = keywords.filter(kw => sentence.includes(kw))
+    for (const kw of present) {
+      keywordFreq.set(kw, (keywordFreq.get(kw) || 0) + 1)
+    }
     for (const a of present) {
       for (const b of present) {
-        if (a !== b) cooccurrence.get(a)?.add(b)
+        if (a !== b) {
+          const aMap = cooccurrence.get(a)!
+          aMap.set(b, (aMap.get(b) || 0) + 1)
+        }
       }
     }
   }
 
-  // Simple greedy clustering
+  // Sort keywords by frequency for better cluster seeds
+  const sortedKeywords = [...keywords].sort(
+    (a, b) => (keywordFreq.get(b) || 0) - (keywordFreq.get(a) || 0)
+  )
+
+  // Enhanced greedy clustering with strength threshold
   const assigned = new Set<string>()
   const clusters: string[][] = []
+  const MIN_COOCCURRENCE = 1
 
-  for (const kw of keywords) {
+  for (const kw of sortedKeywords) {
     if (assigned.has(kw)) continue
+
     const cluster = [kw]
     assigned.add(kw)
 
-    const neighbors = cooccurrence.get(kw) || new Set()
-    for (const neighbor of neighbors) {
+    const neighbors = cooccurrence.get(kw) || new Map()
+
+    // Get neighbors sorted by co-occurrence strength
+    const sortedNeighbors = [...neighbors.entries()]
+      .filter(([_, count]) => count >= MIN_COOCCURRENCE)
+      .sort((a, b) => b[1] - a[1])
+
+    // Add top neighbors to cluster (limit cluster size)
+    const MAX_CLUSTER_SIZE = 5
+    for (const [neighbor] of sortedNeighbors) {
+      if (cluster.length >= MAX_CLUSTER_SIZE) break
       if (!assigned.has(neighbor)) {
         cluster.push(neighbor)
         assigned.add(neighbor)
       }
     }
+
     clusters.push(cluster)
   }
 
-  return clusters
+  // Sort clusters by total frequency (prominence)
+  clusters.sort((a, b) => {
+    const aFreq = a.reduce((sum, kw) => sum + (keywordFreq.get(kw) || 0), 0)
+    const bFreq = b.reduce((sum, kw) => sum + (keywordFreq.get(kw) || 0), 0)
+    return bFreq - aFreq
+  })
+
+  // Merge small singleton clusters if they have weak connections
+  const MIN_CLUSTER_SIZE = 2
+  const singletons: string[] = []
+  const mergedClusters: string[][] = []
+
+  for (const cluster of clusters) {
+    if (cluster.length < MIN_CLUSTER_SIZE) {
+      singletons.push(...cluster)
+    } else {
+      mergedClusters.push(cluster)
+    }
+  }
+
+  // Add singletons as a miscellaneous cluster if any
+  if (singletons.length > 0) {
+    mergedClusters.push(singletons)
+  }
+
+  return mergedClusters
 }
 
 // ─── Content-Aware Narrative ─────────────────────────────────────
