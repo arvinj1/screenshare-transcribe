@@ -34,6 +34,8 @@ export interface SessionSummary {
   audioWordCount: number
   audioTranscript: string
   fullText: string
+  summarySource?: SummarySource
+  aiTitle?: string
   inference: {
     contentType: string
     contentTypeLabel: string
@@ -53,6 +55,25 @@ export interface SlideSummary {
   audioText: string
   keywords: string[]
   urls: string[]
+}
+
+export type SummarySource = 'local' | 'ai'
+export type AIStatus = 'off' | 'loading' | 'done' | 'failed'
+
+export interface AISummary {
+  title: string
+  narrative: string
+  keyPoints: string[]
+  actionItems: string[]
+  topics: string[]
+}
+
+export interface SavedSession {
+  id: string
+  title: string
+  createdAt: number
+  updatedAt: number
+  summary: SessionSummary
 }
 
 export interface AppState {

@@ -1,13 +1,28 @@
 import { useState } from 'react'
-import type { SessionSummary } from '../types'
-import { downloadMarkdown, copyToClipboard } from '../services/exportService'
+import type { SessionSummary, AIStatus, SavedSession } from '../types'
+import { downloadMarkdown, downloadJSON, copyToClipboard } from '../services/exportService'
+import { generateId } from '../services/sessionStorage'
 
 interface SummaryViewProps {
   summary: SessionSummary | null
+  aiStatus: AIStatus
   onDismiss: () => void
 }
 
-export function SummaryView({ summary, onDismiss }: SummaryViewProps) {
+function aiStatusBadge(status: AIStatus): { label: string; className: string } {
+  switch (status) {
+    case 'loading':
+      return { label: 'Generating AI summary…', className: 'summary-badge summary-badge-loading' }
+    case 'done':
+      return { label: 'AI summary', className: 'summary-badge summary-badge-ai' }
+    case 'failed':
+      return { label: 'Local summary — AI unavailable', className: 'summary-badge summary-badge-local' }
+    default:
+      return { label: 'Local summary', className: 'summary-badge summary-badge-local' }
+  }
+}
+
+export function SummaryView({ summary, aiStatus, onDismiss }: SummaryViewProps) {
   const [copied, setCopied] = useState(false)
   const [rawOpen, setRawOpen] = useState(false)
 
@@ -30,15 +45,32 @@ export function SummaryView({ summary, onDismiss }: SummaryViewProps) {
     ...inference.actionItems.map(a => ({ text: a, kind: 'action' as const })),
   ]
 
+  const badge = aiStatusBadge(aiStatus)
+
+  const handleExportJSON = () => {
+    const now = Date.now()
+    const session: SavedSession = {
+      id: generateId(),
+      title: summary.aiTitle || 'Session Summary',
+      createdAt: now,
+      updatedAt: now,
+      summary,
+    }
+    downloadJSON(session)
+  }
+
   return (
     <div className="summary-overlay">
       <div className="summary-modal">
         {/* Header with export actions */}
         <div className="summary-header">
-          <h2>Session Summary</h2>
+          <h2>{summary.aiTitle || 'Session Summary'}</h2>
           <div className="summary-header-actions">
             <button className="btn btn-export" onClick={() => downloadMarkdown(summary)}>
               Export .md
+            </button>
+            <button className="btn btn-export" onClick={handleExportJSON}>
+              Export .json
             </button>
             <button className="btn btn-copy" onClick={handleCopy}>
               {copied ? 'Copied!' : 'Copy'}
@@ -52,6 +84,8 @@ export function SummaryView({ summary, onDismiss }: SummaryViewProps) {
         <div className="summary-content">
           {/* Compact stats bar */}
           <div className="summary-stats-bar">
+            <span className={badge.className}>{badge.label}</span>
+            <span className="stats-bar-sep">&middot;</span>
             <span>{summary.duration}</span>
             <span className="stats-bar-sep">&middot;</span>
             <span>{summary.slideCount} slide{summary.slideCount !== 1 ? 's' : ''}</span>

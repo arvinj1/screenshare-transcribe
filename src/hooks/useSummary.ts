@@ -1,11 +1,14 @@
-import { useState, useCallback } from 'react'
-import type { OCRResult, AudioSegment, SessionSummary, SlideSummary } from '../types'
+import { useState, useCallback, useRef } from 'react'
+import type { OCRResult, AudioSegment, SessionSummary, SlideSummary, AIStatus } from '../types'
 import { extractKeywords } from '../services/textCleaner'
 import { inferFromText } from '../services/textInference'
+import { summarizeWithAI, isAIEnabled } from '../services/aiSummarizer'
 
 interface UseSummaryReturn {
   summary: SessionSummary | null
+  aiStatus: AIStatus
   generateSummary: (results: OCRResult[], sessionStart: number | null, audioSegments?: AudioSegment[]) => void
+  loadSummary: (summary: SessionSummary) => void
   clearSummary: () => void
 }
 
@@ -86,8 +89,47 @@ function buildSlides(results: OCRResult[], audioSegments: AudioSegment[] = []): 
 
 export function useSummary(): UseSummaryReturn {
   const [summary, setSummary] = useState<SessionSummary | null>(null)
+  const [aiStatus, setAIStatus] = useState<AIStatus>('off')
+  // Increments on every generate/clear so a slow AI response can never
+  // overwrite a newer summary.
+  const generationRef = useRef(0)
+
+  const enrichWithAI = useCallback(async (localSummary: SessionSummary) => {
+    if (!isAIEnabled()) {
+      setAIStatus('off')
+      return
+    }
+    const generation = generationRef.current
+    setAIStatus('loading')
+
+    const ai = await summarizeWithAI(localSummary)
+    if (generation !== generationRef.current) return // stale response
+
+    if (!ai) {
+      setAIStatus('failed')
+      return
+    }
+
+    setSummary(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        summarySource: 'ai',
+        aiTitle: ai.title,
+        inference: {
+          ...prev.inference,
+          narrative: ai.narrative,
+          keySentences: ai.keyPoints,
+          actionItems: ai.actionItems,
+          topicClusters: ai.topics.length > 0 ? [ai.topics] : prev.inference.topicClusters,
+        },
+      }
+    })
+    setAIStatus('done')
+  }, [])
 
   const generateSummary = useCallback((results: OCRResult[], sessionStart: number | null, audioSegments: AudioSegment[] = []) => {
+    generationRef.current += 1
     const audioTranscript = audioSegments
       .filter(s => s.isFinal)
       .map(s => s.text)
@@ -98,7 +140,9 @@ export function useSummary(): UseSummaryReturn {
     const audioSegmentCount = audioSegments.filter(s => s.isFinal).length
 
     if (results.length === 0 && audioSegmentCount === 0) {
+      setAIStatus('off')
       setSummary({
+        summarySource: 'local',
         totalCaptures: 0,
         slideCount: 0,
         duration: '0s',
@@ -154,7 +198,7 @@ export function useSummary(): UseSummaryReturn {
     // Run text inferencing for intelligent insights (uses combined text)
     const inference = inferFromText(fullText, keywords, slideCount, wordCount + audioWordCount, duration)
 
-    setSummary({
+    const localSummary: SessionSummary = {
       totalCaptures: results.length,
       slideCount,
       duration,
@@ -169,17 +213,33 @@ export function useSummary(): UseSummaryReturn {
       audioWordCount,
       audioTranscript,
       fullText,
+      summarySource: 'local',
       inference,
-    })
+    }
+
+    // Show the instant local summary, then upgrade it with an AI summary
+    // in the background (graceful no-op if the API is unavailable).
+    setSummary(localSummary)
+    void enrichWithAI(localSummary)
+  }, [enrichWithAI])
+
+  const loadSummary = useCallback((saved: SessionSummary) => {
+    generationRef.current += 1
+    setAIStatus(saved.summarySource === 'ai' ? 'done' : 'off')
+    setSummary(saved)
   }, [])
 
   const clearSummary = useCallback(() => {
+    generationRef.current += 1
+    setAIStatus('off')
     setSummary(null)
   }, [])
 
   return {
     summary,
+    aiStatus,
     generateSummary,
+    loadSummary,
     clearSummary,
   }
 }

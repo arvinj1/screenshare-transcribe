@@ -1,10 +1,33 @@
-import type { SessionSummary } from '../types'
+import type { SessionSummary, SavedSession } from '../types'
+
+function sanitizeFilename(name: string): string {
+  return name.replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'session'
+}
+
+function uniqueFilename(title: string | undefined, ext: string): string {
+  const base = sanitizeFilename(title ?? 'session-summary')
+  const date = new Date().toISOString().slice(0, 10)
+  const suffix = Math.random().toString(36).slice(2, 8)
+  return `${base}-${date}-${suffix}.${ext}`
+}
+
+function downloadBlob(content: string, mimeType: string, filename: string): void {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
 
 export function generateMarkdown(summary: SessionSummary): string {
   const lines: string[] = []
   const { inference } = summary
 
-  lines.push('# Session Summary')
+  lines.push(`# ${summary.aiTitle || 'Session Summary'}`)
   lines.push('')
 
   // Stats
@@ -69,17 +92,14 @@ export function generateMarkdown(summary: SessionSummary): string {
   return lines.join('\n')
 }
 
-export function downloadMarkdown(summary: SessionSummary): void {
+export function downloadMarkdown(summary: SessionSummary, title?: string): void {
   const md = generateMarkdown(summary)
-  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `session-summary-${new Date().toISOString().slice(0, 10)}.md`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  downloadBlob(md, 'text/markdown;charset=utf-8', uniqueFilename(title ?? summary.aiTitle, 'md'))
+}
+
+export function downloadJSON(session: SavedSession): void {
+  const json = JSON.stringify(session, null, 2)
+  downloadBlob(json, 'application/json;charset=utf-8', uniqueFilename(session.title, 'json'))
 }
 
 export async function copyToClipboard(summary: SessionSummary): Promise<boolean> {
