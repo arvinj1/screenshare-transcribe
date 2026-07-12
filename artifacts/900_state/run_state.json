@@ -1,25 +1,22 @@
 {
-  "stage": "jira",
-  "last_updated": "2026-02-15T00:00:00Z",
+  "stage": "done",
+  "feature": "Audio-only transcription mode",
+  "blocker": null,
+  "updated_at": "2026-02-17T00:00:00-08:00",
+  "needs_approval": false,
   "last_artifacts": [
+    "artifacts/010_planning/plan.yaml",
+    "artifacts/010_planning/exec_summary.md",
     "artifacts/020_jira/jira_payload.yaml",
-    "artifacts/020_jira/jira_comment.md"
+    "artifacts/020_jira/jira_comment.md",
+    "artifacts/030_implementation/change_summary.md",
+    "artifacts/030_implementation/patch.diff",
+    "artifacts/030_implementation/files_changed.yaml",
+    "artifacts/040_testing/test_report.yaml"
   ],
-  "history": [
-    {
-      "stage": "intake",
-      "timestamp": "2026-02-15T00:00:00Z",
-      "action": "V2 feature intake completed"
-    },
-    {
-      "stage": "planning",
-      "timestamp": "2026-02-15T00:00:00Z",
-      "action": "Execution plan and structured plan created"
-    },
-    {
-      "stage": "jira",
-      "timestamp": "2026-02-15T00:00:00Z",
-      "action": "Jira payload and comment generated"
-    }
+  "notes": [
+    "All stages complete. Feature ready for release.",
+    "Confidence: 0.82 — solid verification. Release recommendation: approve.",
+    "Gates: PM_INTENT approved, CODE_REVIEW approved, TL_EXECUTION not required."
   ]
 }

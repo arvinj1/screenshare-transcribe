@@ -1,9 +1,11 @@
-export interface ExtractedEntities {
-  emails: string[]
-  dates: Array<{ value: string; normalized?: string }>
-  phones: string[]
-  numbers: Array<{ value: string; context: string }>
-  properNouns: string[]
+export type AppMode = 'screen-ocr' | 'audio-only'
+
+export interface AudioSegment {
+  id: string
+  timestamp: number
+  text: string
+  isFinal: boolean
+  confidence: number
 }
 
 export interface OCRResult {
@@ -15,16 +17,6 @@ export interface OCRResult {
   language: string
   urls: string[]
   slideNumber: number
-  entities: ExtractedEntities
-}
-
-export interface SlideGroup {
-  slideNumber: number
-  results: OCRResult[]
-  startTime: number
-  endTime: number
-  avgConfidence: number
-  allEntities: ExtractedEntities
 }
 
 export interface SessionSummary {
@@ -36,13 +28,14 @@ export interface SessionSummary {
   avgConfidence: number
   languages: string[]
   urls: string[]
-  emails: string[]
-  phones: string[]
-  dates: Array<{ value: string; normalized?: string }>
-  properNouns: string[]
   keywords: string[]
   slides: SlideSummary[]
+  audioSegmentCount: number
+  audioWordCount: number
+  audioTranscript: string
   fullText: string
+  summarySource?: SummarySource
+  aiTitle?: string
   inference: {
     contentType: string
     contentTypeLabel: string
@@ -59,10 +52,28 @@ export interface SlideSummary {
   slideNumber: number
   captureCount: number
   text: string
+  audioText: string
   keywords: string[]
   urls: string[]
-  emails: string[]
-  entities: ExtractedEntities
+}
+
+export type SummarySource = 'local' | 'ai'
+export type AIStatus = 'off' | 'loading' | 'done' | 'failed'
+
+export interface AISummary {
+  title: string
+  narrative: string
+  keyPoints: string[]
+  actionItems: string[]
+  topics: string[]
+}
+
+export interface SavedSession {
+  id: string
+  title: string
+  createdAt: number
+  updatedAt: number
+  summary: SessionSummary
 }
 
 export interface AppState {

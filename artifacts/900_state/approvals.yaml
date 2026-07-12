@@ -1,15 +1,16 @@
-approvals:
+gates:
   PM_INTENT:
-    status: granted
-    timestamp: "2026-02-15T00:00:00Z"
-    notes: "V2 intake approved - enhance transcript usability"
-
-  TECH_REVIEW:
-    status: pending
-    timestamp: null
+    status: "approved"
+    by: "aravind"
+    at: "2026-02-16T00:00:00-08:00"
+    notes: "i am the bloody pm"
+  TL_EXECUTION:
+    status: "pending"
+    by: null
+    at: null
     notes: null
-
-  IMPLEMENTATION:
-    status: pending
-    timestamp: null
-    notes: null
+  CODE_REVIEW:
+    status: "approved"
+    by: "aravind"
+    at: "2026-02-16T00:00:00-08:00"
+    notes: "ship-it"

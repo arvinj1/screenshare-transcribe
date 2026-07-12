@@ -1,0 +1,28 @@
+files:
+  new:
+    - path: "src/components/AudioOnlyPanel.tsx"
+      task: "T4"
+      description: "Visual panel with pulsing mic icon for audio-only mode"
+  modified:
+    - path: "src/types/index.ts"
+      task: "T1"
+      description: "Added AppMode type and audioText to SlideSummary"
+    - path: "src/App.tsx"
+      task: "T2"
+      description: "Mode state, audio-only start/stop handlers, mode-based dispatch"
+    - path: "src/components/Header.tsx"
+      task: "T3"
+      description: "Mode toggle segmented control, adaptive indicators"
+    - path: "src/components/ShareControls.tsx"
+      task: "T3"
+      description: "Mode-aware button labels (Start Sharing / Start Recording)"
+    - path: "src/components/MainLayout.tsx"
+      task: "T5"
+      description: "Conditional rendering: AudioOnlyPanel or ScreenPanel based on mode"
+    - path: "src/App.css"
+      task: "T6"
+      description: "CSS for mode toggle, audio-only panel, pulse animation"
+  not_modified:
+    - path: "src/hooks/useSummary.ts"
+      task: "T7"
+      description: "Verified: already handles audio-only summaries correctly (no code change needed)"

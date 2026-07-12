@@ -24,3 +24,5 @@ npm-debug.log*
 # IntentForge artifacts (local planning)
 .intent-forge/
 .vercel
+.env*.local
+.claude/

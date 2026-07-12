@@ -1,356 +1,192 @@
-import type { SessionSummary, OCRResult } from '../types'
-import { TopicClusterView } from './TopicClusterView'
+import { useState } from 'react'
+import type { SessionSummary, AIStatus, SavedSession } from '../types'
+import { downloadMarkdown, downloadJSON, copyToClipboard } from '../services/exportService'
+import { generateId } from '../services/sessionStorage'
 
 interface SummaryViewProps {
   summary: SessionSummary | null
-  results: OCRResult[]
+  aiStatus: AIStatus
   onDismiss: () => void
 }
 
-function ConfidenceHistogram({ results }: { results: OCRResult[] }) {
-  if (results.length === 0) return null
-
-  const buckets = [0, 0, 0, 0, 0]
-  for (const r of results) {
-    const idx = Math.min(Math.floor(r.confidence / 20), 4)
-    buckets[idx]++
+function aiStatusBadge(status: AIStatus): { label: string; className: string } {
+  switch (status) {
+    case 'loading':
+      return { label: 'Generating AI summary…', className: 'summary-badge summary-badge-loading' }
+    case 'done':
+      return { label: 'AI summary', className: 'summary-badge summary-badge-ai' }
+    case 'failed':
+      return { label: 'Local summary — AI unavailable', className: 'summary-badge summary-badge-local' }
+    default:
+      return { label: 'Local summary', className: 'summary-badge summary-badge-local' }
   }
-
-  const maxCount = Math.max(...buckets, 1)
-  const labels = ['0-20', '20-40', '40-60', '60-80', '80-100']
-  const colors = ['#f44336', '#ff9800', '#ffeb3b', '#8bc34a', '#4caf50']
-
-  return (
-    <div className="confidence-histogram">
-      <div className="histogram-bars">
-        {buckets.map((count, i) => (
-          <div key={i} className="histogram-bar-container">
-            <div
-              className="histogram-bar"
-              style={{
-                height: `${(count / maxCount) * 100}%`,
-                backgroundColor: colors[i],
-              }}
-            >
-              {count > 0 && <span className="histogram-count">{count}</span>}
-            </div>
-            <span className="histogram-label">{labels[i]}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
 }
 
-function EntityCount({ label, count }: { label: string; count: number }) {
-  if (count === 0) return null
-  return (
-    <div className="stat-item">
-      <span className="stat-value">{count}</span>
-      <span className="stat-label">{label}</span>
-    </div>
-  )
-}
+export function SummaryView({ summary, aiStatus, onDismiss }: SummaryViewProps) {
+  const [copied, setCopied] = useState(false)
+  const [rawOpen, setRawOpen] = useState(false)
 
-export function SummaryView({ summary, results, onDismiss }: SummaryViewProps) {
   if (!summary) return null
 
   const { inference } = summary
-  const hasEmails = summary.emails.length > 0
-  const hasUrls = summary.urls.length > 0
-  const hasPhones = summary.phones.length > 0
-  const hasDates = summary.dates.length > 0
-  const hasProperNouns = summary.properNouns.length > 0
-  const hasExtractedItems = hasEmails || hasUrls || hasPhones || hasDates
+  const totalWords = summary.wordCount + summary.audioWordCount
+
+  const handleCopy = async () => {
+    const ok = await copyToClipboard(summary)
+    if (ok) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  // Merge key sentences and action items into one insights list
+  const insights: { text: string; kind: 'point' | 'action' }[] = [
+    ...inference.keySentences.map(s => ({ text: s, kind: 'point' as const })),
+    ...inference.actionItems.map(a => ({ text: a, kind: 'action' as const })),
+  ]
+
+  const badge = aiStatusBadge(aiStatus)
+
+  const handleExportJSON = () => {
+    const now = Date.now()
+    const session: SavedSession = {
+      id: generateId(),
+      title: summary.aiTitle || 'Session Summary',
+      createdAt: now,
+      updatedAt: now,
+      summary,
+    }
+    downloadJSON(session)
+  }
 
   return (
     <div className="summary-overlay">
       <div className="summary-modal">
+        {/* Header with export actions */}
         <div className="summary-header">
-          <h2>Session Summary</h2>
-          <button className="btn btn-dismiss" onClick={onDismiss}>
-            Dismiss
-          </button>
+          <h2>{summary.aiTitle || 'Session Summary'}</h2>
+          <div className="summary-header-actions">
+            <button className="btn btn-export" onClick={() => downloadMarkdown(summary)}>
+              Export .md
+            </button>
+            <button className="btn btn-export" onClick={handleExportJSON}>
+              Export .json
+            </button>
+            <button className="btn btn-copy" onClick={handleCopy}>
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <button className="btn btn-dismiss" onClick={onDismiss}>
+              Dismiss
+            </button>
+          </div>
         </div>
-        <div className="summary-content">
 
-          {/* ── Inferred Narrative ── */}
+        <div className="summary-content">
+          {/* Compact stats bar */}
+          <div className="summary-stats-bar">
+            <span className={badge.className}>{badge.label}</span>
+            <span className="stats-bar-sep">&middot;</span>
+            <span>{summary.duration}</span>
+            <span className="stats-bar-sep">&middot;</span>
+            <span>{summary.slideCount} slide{summary.slideCount !== 1 ? 's' : ''}</span>
+            <span className="stats-bar-sep">&middot;</span>
+            <span>{totalWords} words</span>
+            {summary.audioSegmentCount > 0 && (
+              <>
+                <span className="stats-bar-sep">&middot;</span>
+                <span>{summary.audioSegmentCount} audio segments</span>
+              </>
+            )}
+          </div>
+
+          {/* AI narrative — hero element */}
           {inference.narrative && (
             <section className="summary-section narrative-section">
-              <h3>🧠 Inferred Summary</h3>
-              <div className="narrative-box">
-                {inference.narrative}
-              </div>
+              <div className="narrative-box">{inference.narrative}</div>
             </section>
           )}
 
-          {/* ── Stats Grid ── */}
-          <section className="summary-section">
-            <h3>📊 Overview</h3>
-            <div className="summary-stats">
-              <div className="stat-item stat-highlight">
-                <span className="stat-value">{inference.contentTypeLabel.split(' ')[0]}</span>
-                <span className="stat-label">{inference.contentTypeLabel.split(' ').slice(1).join(' ')}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-value">{summary.slideCount}</span>
-                <span className="stat-label">Slides / Screens</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-value">{summary.totalCaptures}</span>
-                <span className="stat-label">Captures</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-value">{summary.wordCount.toLocaleString()}</span>
-                <span className="stat-label">Words</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-value">{summary.duration}</span>
-                <span className="stat-label">Duration</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-value">{summary.avgConfidence.toFixed(0)}%</span>
-                <span className="stat-label">Avg Confidence</span>
-              </div>
-              {summary.languages.length > 0 && (
-                <div className="stat-item">
-                  <span className="stat-value">{summary.languages.join(', ')}</span>
-                  <span className="stat-label">Languages</span>
-                </div>
-              )}
-              <EntityCount label="Emails" count={summary.emails.length} />
-              <EntityCount label="URLs" count={summary.urls.length} />
-              <EntityCount label="Phone Numbers" count={summary.phones.length} />
-              <EntityCount label="Dates" count={summary.dates.length} />
-            </div>
-          </section>
-
-          {/* ── Confidence Distribution ── */}
-          {results.length > 0 && (
+          {/* Key Insights */}
+          {insights.length > 0 && (
             <section className="summary-section">
-              <h3>Confidence Distribution</h3>
-              <ConfidenceHistogram results={results} />
-            </section>
-          )}
-
-          {/* ── Extracted Emails & URLs ── */}
-          {hasExtractedItems && (
-            <section className="summary-section">
-              <h3>📋 Extracted Contact Info & Links</h3>
-              <div className="extracted-items-grid">
-
-                {hasEmails && (
-                  <div className="extracted-group">
-                    <h4 className="extracted-group-title">
-                      <span className="extracted-icon">📧</span>
-                      Emails ({summary.emails.length})
-                    </h4>
-                    <ul className="extracted-list">
-                      {summary.emails.map((email, i) => (
-                        <li key={i} className="extracted-item extracted-email">
-                          <a href={`mailto:${email}`}>{email}</a>
-                          <button
-                            className="copy-btn"
-                            onClick={() => navigator.clipboard.writeText(email)}
-                            title="Copy"
-                          >
-                            📋
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {hasUrls && (
-                  <div className="extracted-group">
-                    <h4 className="extracted-group-title">
-                      <span className="extracted-icon">🔗</span>
-                      URLs ({summary.urls.length})
-                    </h4>
-                    <ul className="extracted-list">
-                      {summary.urls.map((url, i) => (
-                        <li key={i} className="extracted-item extracted-url">
-                          <a href={url} target="_blank" rel="noopener noreferrer">
-                            {url}
-                          </a>
-                          <button
-                            className="copy-btn"
-                            onClick={() => navigator.clipboard.writeText(url)}
-                            title="Copy"
-                          >
-                            📋
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {hasPhones && (
-                  <div className="extracted-group">
-                    <h4 className="extracted-group-title">
-                      <span className="extracted-icon">📞</span>
-                      Phone Numbers ({summary.phones.length})
-                    </h4>
-                    <ul className="extracted-list">
-                      {summary.phones.map((phone, i) => (
-                        <li key={i} className="extracted-item extracted-phone">
-                          <a href={`tel:${phone.replace(/[\s()-]/g, '')}`}>{phone}</a>
-                          <button
-                            className="copy-btn"
-                            onClick={() => navigator.clipboard.writeText(phone)}
-                            title="Copy"
-                          >
-                            📋
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {hasDates && (
-                  <div className="extracted-group">
-                    <h4 className="extracted-group-title">
-                      <span className="extracted-icon">📅</span>
-                      Dates ({summary.dates.length})
-                    </h4>
-                    <ul className="extracted-list">
-                      {summary.dates.map((date, i) => (
-                        <li key={i} className="extracted-item extracted-date">
-                          <span>{date.value}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* ── Headings ── */}
-          {inference.headings.length > 0 && (
-            <section className="summary-section">
-              <h3>📑 Headings Detected</h3>
-              <ol className="headings-list">
-                {inference.headings.map((h, i) => (
-                  <li key={i}>{h}</li>
-                ))}
-              </ol>
-            </section>
-          )}
-
-          {/* ── Action Items ── */}
-          {inference.actionItems.length > 0 && (
-            <section className="summary-section">
-              <h3>✅ Action Items</h3>
-              <ul className="action-items-list">
-                {inference.actionItems.map((item, i) => (
-                  <li key={i}>{item}</li>
+              <h3>Key Insights</h3>
+              <ul className="insights-list">
+                {insights.map((item, i) => (
+                  <li key={i} className={item.kind === 'action' ? 'insight-action' : 'insight-point'}>
+                    {item.text}
+                  </li>
                 ))}
               </ul>
             </section>
           )}
 
-          {/* ── Key Points ── */}
-          {inference.keySentences.length > 0 && (
-            <section className="summary-section">
-              <h3>💡 Key Points</h3>
-              <ul className="key-sentences-list">
-                {inference.keySentences.map((s, i) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {/* ── Proper Nouns / Named Entities ── */}
-          {hasProperNouns && (
-            <section className="summary-section">
-              <h3>👤 Names & Entities Mentioned</h3>
-              <div className="keyword-tags">
-                {summary.properNouns.map((noun, i) => (
-                  <span key={i} className="keyword-tag entity-tag">{noun}</span>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* ── Key Topics ── */}
-          {summary.keywords.length > 0 && (
-            <section className="summary-section">
-              <h3>🏷️ Key Topics</h3>
-              {inference.topicClusters.length > 1 ? (
-                <TopicClusterView
-                  clusters={inference.topicClusters}
-                  slides={summary.slides}
-                />
-              ) : (
-                <div className="keyword-tags">
-                  {summary.keywords.map((kw, i) => (
-                    <span key={i} className="keyword-tag">{kw}</span>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* ── Slide Breakdown ── */}
+          {/* Slide Timeline */}
           {summary.slides.length > 0 && (
             <section className="summary-section">
-              <h3>📄 Slide Breakdown</h3>
-              <div className="slide-breakdown">
-                {summary.slides.map(slide => {
-                  const slideHasExtras = slide.urls.length > 0 || slide.emails.length > 0
-                  return (
-                    <details key={slide.slideNumber} className="slide-detail">
-                      <summary>
-                        <strong>Slide {slide.slideNumber}</strong>
-                        <span className="slide-meta">
-                          {slide.captureCount} capture{slide.captureCount !== 1 ? 's' : ''}
-                          {slide.keywords.length > 0 && ` · ${slide.keywords.slice(0, 3).join(', ')}`}
-                          {slide.urls.length > 0 && ` · ${slide.urls.length} URL${slide.urls.length !== 1 ? 's' : ''}`}
-                          {slide.emails.length > 0 && ` · ${slide.emails.length} email${slide.emails.length !== 1 ? 's' : ''}`}
-                        </span>
-                      </summary>
-                      <pre className="slide-text">{slide.text}</pre>
-                      {slideHasExtras && (
-                        <div className="slide-extras">
-                          {slide.urls.length > 0 && (
-                            <div className="slide-urls">
-                              <span className="slide-extras-label">URLs:</span>
-                              {slide.urls.map((url, i) => (
-                                <a key={i} href={url} target="_blank" rel="noopener noreferrer">{url}</a>
-                              ))}
-                            </div>
-                          )}
-                          {slide.emails.length > 0 && (
-                            <div className="slide-emails">
-                              <span className="slide-extras-label">Emails:</span>
-                              {slide.emails.map((email, i) => (
-                                <a key={i} href={`mailto:${email}`}>{email}</a>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </details>
-                  )
-                })}
+              <h3>Slide Timeline</h3>
+              <div className="summary-timeline">
+                {summary.slides.map(slide => (
+                  <div key={slide.slideNumber} className="summary-timeline-card">
+                    <div className="summary-timeline-card-header">
+                      <strong>Slide {slide.slideNumber}</strong>
+                      <span className="slide-meta">
+                        {slide.captureCount} capture{slide.captureCount !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <pre className="slide-text">{slide.text}</pre>
+                    {slide.audioText && (
+                      <div className="summary-timeline-audio">
+                        <span className="audio-badge">Audio</span>
+                        <span>{slide.audioText}</span>
+                      </div>
+                    )}
+                    {slide.urls.length > 0 && (
+                      <div className="slide-urls">
+                        {slide.urls.map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer">{url}</a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </section>
           )}
 
-          {/* ── Full Captured Text ── */}
-          <section className="summary-section">
-            <details className="full-text-details">
-              <summary className="full-text-toggle">
-                <h3>📝 Full Captured Text</h3>
-                <span className="full-text-chars">{summary.charCount.toLocaleString()} chars</span>
-              </summary>
-              <pre className="full-text">{summary.fullText}</pre>
-            </details>
+          {/* Collapsible Raw Data */}
+          <section className="summary-section raw-data-section">
+            <button
+              className="raw-data-toggle"
+              onClick={() => setRawOpen(o => !o)}
+            >
+              {rawOpen ? 'Hide' : 'Show'} Raw Data
+            </button>
+            {rawOpen && (
+              <div className="raw-data-content">
+                {summary.urls.length > 0 && (
+                  <div className="raw-data-block">
+                    <h4>URLs ({summary.urls.length})</h4>
+                    <ul className="url-list">
+                      {summary.urls.map((url, i) => (
+                        <li key={i}>
+                          <a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {summary.audioTranscript && (
+                  <div className="raw-data-block">
+                    <h4>Full Audio Transcript</h4>
+                    <pre className="full-text">{summary.audioTranscript}</pre>
+                  </div>
+                )}
+                <div className="raw-data-block">
+                  <h4>Full Captured Text</h4>
+                  <pre className="full-text">{summary.fullText}</pre>
+                </div>
+              </div>
+            )}
           </section>
         </div>
       </div>

@@ -1,0 +1,8 @@
+repos:
+  - name: "screenshare-transcribe"
+    path: "/Users/aravind/work/screenshare-transcribe"
+    owner: "aravind"
+    lang: "TypeScript"
+    framework: "React 18 + Vite"
+    branch: "feat/v3-align-audio"
+    notes: "Single-repo project. Browser-only SPA with Tesseract.js OCR."

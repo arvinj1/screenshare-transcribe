@@ -1,12 +1,14 @@
-import { useState, useCallback } from 'react'
-import type { OCRResult, SessionSummary, SlideSummary } from '../types'
+import { useState, useCallback, useRef } from 'react'
+import type { OCRResult, AudioSegment, SessionSummary, SlideSummary, AIStatus } from '../types'
 import { extractKeywords } from '../services/textCleaner'
 import { inferFromText } from '../services/textInference'
-import { mergeEntities } from '../services/entityExtractor'
+import { summarizeWithAI, isAIEnabled } from '../services/aiSummarizer'
 
 interface UseSummaryReturn {
   summary: SessionSummary | null
-  generateSummary: (results: OCRResult[], sessionStart: number | null) => void
+  aiStatus: AIStatus
+  generateSummary: (results: OCRResult[], sessionStart: number | null, audioSegments?: AudioSegment[]) => void
+  loadSummary: (summary: SessionSummary) => void
   clearSummary: () => void
 }
 
@@ -21,7 +23,7 @@ function formatDuration(ms: number): string {
   return `${seconds}s`
 }
 
-function buildSlides(results: OCRResult[]): SlideSummary[] {
+function buildSlides(results: OCRResult[], audioSegments: AudioSegment[] = []): SlideSummary[] {
   const slideMap = new Map<number, OCRResult[]>()
 
   for (const r of results) {
@@ -30,37 +32,117 @@ function buildSlides(results: OCRResult[]): SlideSummary[] {
     slideMap.set(r.slideNumber, existing)
   }
 
+  // Sort slides by number to compute timestamp ranges
+  const slideNumbers = [...slideMap.keys()].sort((a, b) => a - b)
+
   const slides: SlideSummary[] = []
-  for (const [slideNumber, slideResults] of slideMap) {
+  for (let i = 0; i < slideNumbers.length; i++) {
+    const slideNumber = slideNumbers[i]
+    const slideResults = slideMap.get(slideNumber)!
+
     // Use the longest text capture as representative for the slide
     const bestCapture = slideResults.reduce((best, r) =>
       r.text.length > best.text.length ? r : best
     )
     const allUrls = [...new Set(slideResults.flatMap(r => r.urls))]
-    const allEmails = [...new Set(slideResults.flatMap(r => r.entities.emails))]
-    const slideEntities = mergeEntities(slideResults.map(r => r.entities))
     const keywords = extractKeywords(bestCapture.text, 5)
+
+    // Compute time range for this slide
+    const slideStart = Math.min(...slideResults.map(r => r.timestamp))
+    const slideEnd = i < slideNumbers.length - 1
+      ? Math.min(...slideMap.get(slideNumbers[i + 1])!.map(r => r.timestamp))
+      : Infinity
+
+    // Gather audio segments that fall within this slide's time range
+    const finalSegments = audioSegments.filter(s => s.isFinal)
+    const slideAudio = finalSegments
+      .filter(s => s.timestamp >= slideStart && s.timestamp < slideEnd)
+      .map(s => s.text)
+      .join(' ')
+      .trim()
 
     slides.push({
       slideNumber,
       captureCount: slideResults.length,
       text: bestCapture.text,
+      audioText: slideAudio,
       keywords,
       urls: allUrls,
-      emails: allEmails,
-      entities: slideEntities,
     })
   }
 
-  return slides.sort((a, b) => a.slideNumber - b.slideNumber)
+  // Assign any audio that occurred before the first slide
+  if (slides.length > 0 && results.length > 0) {
+    const firstSlideStart = Math.min(...results.map(r => r.timestamp))
+    const preAudio = audioSegments
+      .filter(s => s.isFinal && s.timestamp < firstSlideStart)
+      .map(s => s.text)
+      .join(' ')
+      .trim()
+    if (preAudio) {
+      slides[0].audioText = preAudio + (slides[0].audioText ? ' ' + slides[0].audioText : '')
+    }
+  }
+
+  return slides
 }
 
 export function useSummary(): UseSummaryReturn {
   const [summary, setSummary] = useState<SessionSummary | null>(null)
+  const [aiStatus, setAIStatus] = useState<AIStatus>('off')
+  // Increments on every generate/clear so a slow AI response can never
+  // overwrite a newer summary.
+  const generationRef = useRef(0)
 
-  const generateSummary = useCallback((results: OCRResult[], sessionStart: number | null) => {
-    if (results.length === 0) {
+  const enrichWithAI = useCallback(async (localSummary: SessionSummary) => {
+    if (!isAIEnabled()) {
+      setAIStatus('off')
+      return
+    }
+    const generation = generationRef.current
+    setAIStatus('loading')
+
+    const ai = await summarizeWithAI(localSummary)
+    if (generation !== generationRef.current) return // stale response
+
+    if (!ai) {
+      setAIStatus('failed')
+      return
+    }
+
+    setSummary(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        summarySource: 'ai',
+        aiTitle: ai.title,
+        inference: {
+          ...prev.inference,
+          narrative: ai.narrative,
+          keySentences: ai.keyPoints,
+          actionItems: ai.actionItems,
+          topicClusters: ai.topics.length > 0 ? [ai.topics] : prev.inference.topicClusters,
+        },
+      }
+    })
+    setAIStatus('done')
+  }, [])
+
+  const generateSummary = useCallback((results: OCRResult[], sessionStart: number | null, audioSegments: AudioSegment[] = []) => {
+    generationRef.current += 1
+    const audioTranscript = audioSegments
+      .filter(s => s.isFinal)
+      .map(s => s.text)
+      .join(' ')
+    const audioWordCount = audioTranscript.length > 0
+      ? audioTranscript.split(/\s+/).filter(w => w.length > 0).length
+      : 0
+    const audioSegmentCount = audioSegments.filter(s => s.isFinal).length
+
+    if (results.length === 0 && audioSegmentCount === 0) {
+      setAIStatus('off')
       setSummary({
+        summarySource: 'local',
         totalCaptures: 0,
         slideCount: 0,
         duration: '0s',
@@ -69,12 +151,11 @@ export function useSummary(): UseSummaryReturn {
         avgConfidence: 0,
         languages: [],
         urls: [],
-        emails: [],
-        phones: [],
-        dates: [],
-        properNouns: [],
         keywords: [],
         slides: [],
+        audioSegmentCount: 0,
+        audioWordCount: 0,
+        audioTranscript: '',
         fullText: 'No text was captured during this session.',
         inference: {
           contentType: 'general',
@@ -90,28 +171,34 @@ export function useSummary(): UseSummaryReturn {
       return
     }
 
-    const slides = buildSlides(results)
+    const slides = buildSlides(results, audioSegments)
     const slideCount = slides.length
 
     // Use deduplicated text (best capture per slide) for the full text
-    const fullText = slides.map(s => s.text).join('\n\n')
+    const ocrText = slides.map(s => s.text).join('\n\n')
     const allUrls = [...new Set(results.flatMap(r => r.urls))]
-    const allEntities = mergeEntities(results.map(r => r.entities))
-    const avgConfidence = results.reduce((sum, r) => sum + r.confidence, 0) / results.length
+    const avgConfidence = results.length > 0
+      ? results.reduce((sum, r) => sum + r.confidence, 0) / results.length
+      : 0
     const languages = [...new Set(results.map(r => r.language).filter(l => l !== 'und'))]
 
-    const wordCount = fullText.split(/\s+/).filter(w => w.length > 0).length
-    const charCount = fullText.length
+    // Combine OCR and audio text for inference
+    const fullText = audioTranscript.length > 0
+      ? `${ocrText}\n\n--- Audio Transcript ---\n${audioTranscript}`
+      : ocrText
+
+    const wordCount = ocrText.split(/\s+/).filter(w => w.length > 0).length
+    const charCount = ocrText.length
 
     const durationMs = sessionStart ? Date.now() - sessionStart : 0
     const duration = formatDuration(durationMs)
 
     const keywords = extractKeywords(fullText, 15)
 
-    // Run text inferencing for intelligent insights
-    const inference = inferFromText(fullText, keywords, slideCount, wordCount, duration)
+    // Run text inferencing for intelligent insights (uses combined text)
+    const inference = inferFromText(fullText, keywords, slideCount, wordCount + audioWordCount, duration)
 
-    setSummary({
+    const localSummary: SessionSummary = {
       totalCaptures: results.length,
       slideCount,
       duration,
@@ -120,24 +207,39 @@ export function useSummary(): UseSummaryReturn {
       avgConfidence,
       languages,
       urls: allUrls,
-      emails: allEntities.emails,
-      phones: allEntities.phones,
-      dates: allEntities.dates,
-      properNouns: allEntities.properNouns,
       keywords,
       slides,
+      audioSegmentCount,
+      audioWordCount,
+      audioTranscript,
       fullText,
+      summarySource: 'local',
       inference,
-    })
+    }
+
+    // Show the instant local summary, then upgrade it with an AI summary
+    // in the background (graceful no-op if the API is unavailable).
+    setSummary(localSummary)
+    void enrichWithAI(localSummary)
+  }, [enrichWithAI])
+
+  const loadSummary = useCallback((saved: SessionSummary) => {
+    generationRef.current += 1
+    setAIStatus(saved.summarySource === 'ai' ? 'done' : 'off')
+    setSummary(saved)
   }, [])
 
   const clearSummary = useCallback(() => {
+    generationRef.current += 1
+    setAIStatus('off')
     setSummary(null)
   }, [])
 
   return {
     summary,
+    aiStatus,
     generateSummary,
+    loadSummary,
     clearSummary,
   }
 }

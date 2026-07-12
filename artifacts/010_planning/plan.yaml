@@ -1,113 +1,146 @@
-project:
-  name: "Screenshare Transcription V2"
-  type: "enhancement"
-  stack:
-    - React
-    - Vite
-    - TypeScript
-  constraints:
-    - client-side only
-    - privacy-first
-    - no external APIs
-    - minimal UI extensions
+meta:
+  created_at: "2026-02-16T00:00:00-08:00"
+  intent_ref: "artifacts/000_intake/intent.yaml"
+  planner: "intent-forge-planner"
 
-goal: |
-  Increase user trust, comprehension, and actionability of imperfect
-  client-side OCR transcripts without improving OCR accuracy directly.
+summary: >
+  Add an "Audio-only" mode alongside the existing Screen+OCR mode. When
+  selected, the app captures microphone audio via Web Speech API without
+  triggering screen share. Live transcription is displayed in the transcript
+  panel. The screen panel is replaced with an audio indicator. Session summary
+  is generated from audio data alone. Modes are mutually exclusive and the
+  toggle is disabled while a session is active.
 
-features:
-  - id: confidence-display
-    name: "Confidence-Weighted Transcript Display"
-    priority: P1
-    size: M
-    description: |
-      Visual confidence weighting of transcript text using existing
-      Tesseract confidence scores. Includes opacity scaling, filter
-      slider, and confidence histogram.
-    files_modify:
-      - src/components/OCRResultItem.tsx
-      - src/components/OCRPanel.tsx
-      - src/components/SummaryView.tsx
+approach: "mode-state-conditional-rendering"
+approach_rationale: >
+  Add a top-level `AppMode` type ('screen-ocr' | 'audio-only') and a state
+  variable in App.tsx. All conditional behavior (which hooks to activate,
+  which UI to render, button labels) keys off this single mode value. This is
+  minimal, avoids rewriting existing logic, and keeps the existing Screen+OCR
+  path completely untouched when mode is 'screen-ocr'. The useAudioCapture
+  hook already exists and works standalone — it just needs to be started
+  independently of screen sharing.
+
+tl_gate_required: false
+tl_gate_rationale: >
+  Single-repo, additive change. No cross-repo contracts, no infrastructure
+  changes. Existing Screen+OCR mode is not modified — only new conditional
+  branches are added. Risk is low.
+
+clarification_questions: []
+
+tasks:
+  - id: "T1"
+    title: "Add AppMode type and extend types"
+    description: >
+      Add `AppMode = 'screen-ocr' | 'audio-only'` type to src/types/index.ts.
+      No other type changes needed — AudioSegment, SessionSummary, etc. already
+      exist and support audio-only data.
+    files:
+      - src/types/index.ts
+    estimate: "XS"
+
+  - id: "T2"
+    title: "Add mode state and conditional logic to App.tsx"
+    description: >
+      Add `mode` state (default: 'screen-ocr') to App.tsx. Add `sessionStart`
+      tracking ref for audio-only mode (since useOCR provides it for screen mode).
+      Create `handleStartAudioOnly()` that starts audio capture without screen
+      share and records sessionStart. Create `handleStopAudioOnly()` that stops
+      audio and generates summary. Modify existing `handleStop()` to remain
+      unchanged for screen-ocr mode. Pass `mode` and `isActive` (isSharing OR
+      isRecordingAudio) to Header and MainLayout. Disable mode switching while
+      a session is active.
+    files:
+      - src/App.tsx
+    estimate: "S"
+    depends_on: ["T1"]
+
+  - id: "T3"
+    title: "Add mode selector to Header"
+    description: >
+      Add a toggle/segmented control in the Header to switch between
+      'Screen+OCR' and 'Audio-only' modes. Disable when `isActive` is true.
+      Update button labels: "Start Sharing" / "Start Recording" based on mode.
+      Show mic indicator in audio-only mode when recording. Show slide count
+      only in screen-ocr mode.
+    files:
+      - src/components/Header.tsx
+      - src/components/ShareControls.tsx
+    estimate: "S"
+    depends_on: ["T1"]
+
+  - id: "T4"
+    title: "Create AudioOnlyPanel component"
+    description: >
+      New component src/components/AudioOnlyPanel.tsx that replaces the
+      ScreenPanel when in audio-only mode. Displays a centered pulsing
+      microphone icon and a "Listening..." label when recording, or
+      "Ready to record" when idle. Purely visual — no business logic.
+    files:
+      - src/components/AudioOnlyPanel.tsx (NEW)
+    estimate: "XS"
+
+  - id: "T5"
+    title: "Update MainLayout for mode-conditional rendering"
+    description: >
+      Accept `mode` and `isActive` props. When mode is 'audio-only',
+      render AudioOnlyPanel instead of ScreenPanel. The OCRPanel (transcript
+      panel) is always rendered — it already handles audioSegments. When
+      audio-only and no results, the panel shows audio segments only.
+    files:
+      - src/components/MainLayout.tsx
+    estimate: "XS"
+    depends_on: ["T4"]
+
+  - id: "T6"
+    title: "Add CSS for mode selector and audio-only panel"
+    description: >
+      Add styles for: mode toggle (.mode-toggle, .mode-toggle-btn,
+      .mode-toggle-btn.active), audio-only panel (.audio-only-panel,
+      .mic-icon, @keyframes pulse-mic), and update responsive breakpoints
+      if needed.
+    files:
       - src/App.css
-    files_create: []
-    acceptance_criteria:
-      - Low-confidence text visually de-emphasized
-      - Confidence filter slider filters captures in real-time
-      - Histogram shows confidence distribution
-      - Filter state persists within session
+    estimate: "XS"
 
-  - id: temporal-grouping
-    name: "Temporal Grouping by Time/Slide"
-    priority: P1
-    size: M
-    description: |
-      Group captures by detected slide with collapsible sections
-      and horizontal timeline visualization.
-    files_modify:
-      - src/types/index.ts
-      - src/components/OCRResultList.tsx
-    files_create:
-      - src/components/SlideGroup.tsx
-      - src/components/SlideTimeline.tsx
-    acceptance_criteria:
-      - Captures grouped by slideNumber
-      - Each group shows slide number, capture count, time range
-      - Groups are collapsible/expandable
-      - Timeline provides slide-level navigation
+  - id: "T7"
+    title: "Handle audio-only session summary edge case"
+    description: >
+      Verify useSummary.generateSummary handles the case where results=[]
+      and audioSegments has data (it currently short-circuits to "no text
+      captured" when both are empty, but the `results.length === 0 &&
+      audioSegmentCount === 0` guard should pass correctly). Ensure the
+      summary narrative makes sense for audio-only sessions. Add
+      sessionStart tracking for audio-only duration calculation.
+    files:
+      - src/hooks/useSummary.ts
+    estimate: "XS"
+    depends_on: ["T2"]
 
-  - id: entity-extraction
-    name: "Entity Extraction Panel"
-    priority: P1
-    size: M
-    description: |
-      Dedicated panel extracting emails, dates, phone numbers,
-      prices, and proper nouns from OCR text with source tracking.
-    files_modify:
-      - src/types/index.ts
-      - src/hooks/useOCR.ts
-    files_create:
-      - src/services/entityExtractor.ts
-      - src/components/EntityPanel.tsx
-    acceptance_criteria:
-      - Emails, dates, phones, numbers, proper nouns extracted
-      - Entities deduplicated across captures
-      - Each entity shows source slide reference
-      - One-click copy to clipboard
-      - Tabbed interface for filtering by type
-
-  - id: semantic-summaries
-    name: "Semantic Summaries (Topic Clusters)"
-    priority: P2
-    size: S
-    description: |
-      Enhanced topic clustering with visual representation and
-      keyword-to-slide mapping.
-    files_modify:
-      - src/services/textInference.ts
-      - src/components/SummaryView.tsx
-    files_create:
-      - src/components/TopicClusterView.tsx
-    acceptance_criteria:
-      - Keywords grouped into semantic clusters
-      - Visual cluster display with clear groupings
-      - Each cluster shows associated slides
-      - Topic prominence indicated visually
-
-out_of_scope:
-  - OCR accuracy improvements
-  - Multi-language entity patterns
-  - Export/import functionality
-  - Settings persistence
-  - Backend integration
+rollout:
+  strategy: "feature-branch"
+  branch: "feat/v3-align-audio"
+  steps:
+    - "Implement T1 (types)"
+    - "Implement T2 (App.tsx mode logic)"
+    - "Implement T3-T4 (Header mode toggle + AudioOnlyPanel)"
+    - "Implement T5-T6 (MainLayout + CSS)"
+    - "Implement T7 (summary edge case)"
+    - "npx tsc --noEmit — zero errors"
+    - "npx vite build — clean production build"
+    - "Manual test: Audio-only mode → start recording → speak → see segments → stop → see summary"
+    - "Manual test: Screen+OCR mode — verify unchanged behavior"
+    - "Manual test: Mode toggle disabled during active session"
+  rollback: "Revert commits on feature branch; no infrastructure changes to undo"
 
 risks:
-  - description: "Entity regex false positives"
-    mitigation: "Conservative patterns, validate format"
-  - description: "Performance with many captures"
-    mitigation: "Memoization, virtualized lists if needed"
-  - description: "Topic clustering quality"
-    mitigation: "Fallback to flat keywords if clusters poor"
+  - risk: "Web Speech API requires internet in Chrome (audio sent to Google)"
+    mitigation: "Same constraint as existing audio pipeline; documented in intent"
+  - risk: "No visual feedback if speech recognition silently stops"
+    mitigation: "useAudioCapture already auto-restarts on onend; isListening state tracks status"
+  - risk: "Summary may be sparse with audio-only (no slides, no OCR text)"
+    mitigation: "Verify narrative generation handles zero-slide case gracefully"
 
-dependencies:
-  new_packages: []
-  notes: "All features use existing browser APIs and libraries"
+dependencies_new: []
+dependencies_notes: "No new npm packages required. Reuses existing useAudioCapture hook and Web Speech API."
