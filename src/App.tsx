@@ -3,14 +3,15 @@ import { Header } from './components/Header'
 import { MainLayout } from './components/MainLayout'
 import { SummaryView } from './components/SummaryView'
 import { SessionHistory } from './components/SessionHistory'
-import { OnboardingModal, shouldShowOnboarding, dismissOnboarding } from './components/OnboardingModal'
+import { IntroPanel } from './components/IntroPanel'
+import { SettingsPanel } from './components/SettingsPanel'
 import { useScreenCapture } from './hooks/useScreenCapture'
 import { useOCR } from './hooks/useOCR'
 import { useFrameExtractor } from './hooks/useFrameExtractor'
 import { useSummary } from './hooks/useSummary'
 import { useAudioCapture } from './hooks/useAudioCapture'
 import { useSessionHistory } from './hooks/useSessionHistory'
-import { isAIEnabled, setAIEnabled } from './services/aiSummarizer'
+import { loadAISettings, saveAISettings, forgetApiKey, type AISettings } from './services/aiSettings'
 import type { AppMode, AudioSegment, SavedSession } from './types'
 
 const LONG_SESSION_WARNING_MS = 30 * 60 * 1000
@@ -22,8 +23,8 @@ function App() {
   const [mode, setMode] = useState<AppMode>('screen-ocr')
   const [isRecordingAudio, setIsRecordingAudio] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(shouldShowOnboarding)
-  const [aiEnabled, setAiEnabledState] = useState(isAIEnabled)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [aiSettings, setAISettings] = useState<AISettings>(loadAISettings)
   const [longSession, setLongSession] = useState(false)
   const [viewingSaved, setViewingSaved] = useState<SavedSession | null>(null)
   const audioOnlyStartRef = useRef<number | null>(null)
@@ -33,11 +34,13 @@ function App() {
 
   const { mediaStream, isSharing, error, startCapture, stopCapture } = useScreenCapture()
   const { results, isProcessing, slideCount, sessionStart, processFrame, clearResults } = useOCR()
-  const { summary, aiStatus, generateSummary, loadSummary, clearSummary } = useSummary()
+  const { summary, aiStatus, aiError, generateSummary, loadSummary, clearSummary } = useSummary(aiSettings)
   const { isListening, audioError, startAudio, stopAudio } = useAudioCapture()
   const { sessions, storageError, saveSession, renameSession, deleteSession } = useSessionHistory()
 
   const isActive = isSharing || isRecordingAudio
+  // Explain the app on the page itself until there's something to show
+  const showIntro = !isActive && results.length === 0 && audioSegments.length === 0
 
   // Get video element reference from DOM after render and wait for it to be ready
   useEffect(() => {
@@ -167,16 +170,14 @@ function App() {
     setHistoryOpen(false)
   }, [loadSummary])
 
-  const handleToggleAI = useCallback(() => {
-    setAiEnabledState(prev => {
-      setAIEnabled(!prev)
-      return !prev
-    })
+  const handleSaveSettings = useCallback((next: AISettings) => {
+    saveAISettings(next)
+    setAISettings(next)
   }, [])
 
-  const handleDismissOnboarding = useCallback(() => {
-    dismissOnboarding()
-    setShowOnboarding(false)
+  const handleForgetKey = useCallback(() => {
+    forgetApiKey()
+    setAISettings(prev => ({ ...prev, apiKey: '' }))
   }, [])
 
   // Dispatch start/stop based on mode
@@ -194,8 +195,8 @@ function App() {
         isListening={isListening}
         audioError={audioError}
         isProcessing={isProcessing}
-        aiEnabled={aiEnabled}
-        onToggleAI={handleToggleAI}
+        aiSettings={aiSettings}
+        onOpenSettings={() => setSettingsOpen(true)}
         onOpenHistory={() => setHistoryOpen(true)}
         onStart={handleStart}
         onStop={handleStopDispatch}
@@ -213,16 +214,31 @@ function App() {
         </div>
       )}
 
-      <MainLayout
-        mode={mode}
-        isActive={isActive}
-        mediaStream={mediaStream}
-        ocrResults={results}
-        audioSegments={audioSegments}
-        isProcessing={isProcessing}
-      />
+      {showIntro ? (
+        <IntroPanel
+          mode={mode}
+          aiSettings={aiSettings}
+          onStart={handleStart}
+          onOpenSettings={() => setSettingsOpen(true)}
+        />
+      ) : (
+        <MainLayout
+          mode={mode}
+          isActive={isActive}
+          mediaStream={mediaStream}
+          ocrResults={results}
+          audioSegments={audioSegments}
+          isProcessing={isProcessing}
+        />
+      )}
 
-      <SummaryView summary={summary} aiStatus={aiStatus} onDismiss={handleDismissSummary} />
+      <SummaryView
+        summary={summary}
+        aiStatus={aiStatus}
+        aiError={aiError}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onDismiss={handleDismissSummary}
+      />
 
       {historyOpen && (
         <SessionHistory
@@ -235,7 +251,14 @@ function App() {
         />
       )}
 
-      {showOnboarding && <OnboardingModal onDismiss={handleDismissOnboarding} />}
+      {settingsOpen && (
+        <SettingsPanel
+          settings={aiSettings}
+          onSave={handleSaveSettings}
+          onForgetKey={handleForgetKey}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </div>
   )
 }

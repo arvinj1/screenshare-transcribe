@@ -1,4 +1,5 @@
 import type { AppMode } from '../types'
+import { startBlockedReason } from '../services/browserSupport'
 
 interface ShareControlsProps {
   mode: AppMode
@@ -10,6 +11,7 @@ interface ShareControlsProps {
 export function ShareControls({ mode, isActive, onStart, onStop }: ShareControlsProps) {
   const startLabel = mode === 'audio-only' ? 'Start Recording' : 'Start Sharing'
   const stopLabel = mode === 'audio-only' ? 'Stop Recording' : 'Stop Sharing'
+  const blockedReason = startBlockedReason(mode)
 
   return (
     <div className="share-controls">
@@ -18,7 +20,12 @@ export function ShareControls({ mode, isActive, onStart, onStop }: ShareControls
           {stopLabel}
         </button>
       ) : (
-        <button className="btn btn-start" onClick={onStart}>
+        <button
+          className="btn btn-start"
+          onClick={onStart}
+          disabled={blockedReason !== null}
+          title={blockedReason ?? undefined}
+        >
           {startLabel}
         </button>
       )}

@@ -2,11 +2,14 @@ import { useState, useCallback, useRef } from 'react'
 import type { OCRResult, AudioSegment, SessionSummary, SlideSummary, AIStatus } from '../types'
 import { extractKeywords } from '../services/textCleaner'
 import { inferFromText } from '../services/textInference'
-import { summarizeWithAI, isAIEnabled } from '../services/aiSummarizer'
+import { isClaudeReady, CLIENT_LOAD_ERROR, type AISettings } from '../services/aiSettings'
+import type { AIResult } from '../services/aiSummarizer'
 
 interface UseSummaryReturn {
   summary: SessionSummary | null
   aiStatus: AIStatus
+  /** Why the AI summary failed, when aiStatus is 'failed' */
+  aiError: string | null
   generateSummary: (results: OCRResult[], sessionStart: number | null, audioSegments?: AudioSegment[]) => void
   loadSummary: (summary: SessionSummary) => void
   clearSummary: () => void
@@ -87,28 +90,45 @@ function buildSlides(results: OCRResult[], audioSegments: AudioSegment[] = []): 
   return slides
 }
 
-export function useSummary(): UseSummaryReturn {
+export function useSummary(aiSettings: AISettings): UseSummaryReturn {
   const [summary, setSummary] = useState<SessionSummary | null>(null)
   const [aiStatus, setAIStatus] = useState<AIStatus>('off')
+  const [aiError, setAIError] = useState<string | null>(null)
+  // Read the latest settings when a session ends, without re-creating callbacks
+  const settingsRef = useRef(aiSettings)
+  settingsRef.current = aiSettings
   // Increments on every generate/clear so a slow AI response can never
   // overwrite a newer summary.
   const generationRef = useRef(0)
 
   const enrichWithAI = useCallback(async (localSummary: SessionSummary) => {
-    if (!isAIEnabled()) {
+    const settings = settingsRef.current
+    setAIError(null)
+    if (!isClaudeReady(settings)) {
       setAIStatus('off')
       return
     }
     const generation = generationRef.current
     setAIStatus('loading')
 
-    const ai = await summarizeWithAI(localSummary)
+    // Loaded on demand: the Claude SDK is only needed by people who use it.
+    // If the download fails (offline, or a stale deploy), fail like any other
+    // Claude error so the session still settles and gets auto-saved.
+    let result: AIResult
+    try {
+      const { summarizeWithAI } = await import('../services/aiSummarizer')
+      result = await summarizeWithAI(localSummary, settings)
+    } catch {
+      result = { ok: false, error: CLIENT_LOAD_ERROR }
+    }
     if (generation !== generationRef.current) return // stale response
 
-    if (!ai) {
+    if (!result.ok) {
+      setAIError(result.error)
       setAIStatus('failed')
       return
     }
+    const ai = result.summary
 
     setSummary(prev => {
       if (!prev) return prev
@@ -116,6 +136,7 @@ export function useSummary(): UseSummaryReturn {
         ...prev,
         summarySource: 'ai',
         aiTitle: ai.title,
+        aiModel: ai.model,
         inference: {
           ...prev.inference,
           narrative: ai.narrative,
@@ -225,12 +246,14 @@ export function useSummary(): UseSummaryReturn {
 
   const loadSummary = useCallback((saved: SessionSummary) => {
     generationRef.current += 1
+    setAIError(null)
     setAIStatus(saved.summarySource === 'ai' ? 'done' : 'off')
     setSummary(saved)
   }, [])
 
   const clearSummary = useCallback(() => {
     generationRef.current += 1
+    setAIError(null)
     setAIStatus('off')
     setSummary(null)
   }, [])
@@ -238,6 +261,7 @@ export function useSummary(): UseSummaryReturn {
   return {
     summary,
     aiStatus,
+    aiError,
     generateSummary,
     loadSummary,
     clearSummary,

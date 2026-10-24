@@ -54,6 +54,8 @@ export interface SessionSummary {
   fullText: string
   summarySource?: SummarySource
   aiTitle?: string
+  /** Claude model that produced the AI summary, when summarySource is 'ai' */
+  aiModel?: string
   inference: {
     contentType: string
     contentTypeLabel: string
@@ -84,6 +86,8 @@ export interface AISummary {
   keyPoints: string[]
   actionItems: string[]
   topics: string[]
+  /** Model that wrote the summary (may differ from the one chosen if a fallback ran) */
+  model: string
 }
 
 export interface SavedSession {

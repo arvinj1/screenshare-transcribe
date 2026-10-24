@@ -1,4 +1,5 @@
 import type { AppMode } from '../types'
+import { isClaudeReady, modelLabel, type AISettings } from '../services/aiSettings'
 import { ShareControls } from './ShareControls'
 
 interface HeaderProps {
@@ -10,8 +11,8 @@ interface HeaderProps {
   isListening: boolean
   audioError: string | null
   isProcessing: boolean
-  aiEnabled: boolean
-  onToggleAI: () => void
+  aiSettings: AISettings
+  onOpenSettings: () => void
   onOpenHistory: () => void
   onStart: () => void
   onStop: () => void
@@ -26,12 +27,13 @@ export function Header({
   isListening,
   audioError,
   isProcessing,
-  aiEnabled,
-  onToggleAI,
+  aiSettings,
+  onOpenSettings,
   onOpenHistory,
   onStart,
   onStop,
 }: HeaderProps) {
+  const claude = isClaudeReady(aiSettings)
   return (
     <header className="header">
       <h1>Screen Share Transcribe</h1>
@@ -65,14 +67,14 @@ export function Header({
           <span className="audio-error-indicator" title={audioError}>No audio</span>
         )}
         <button
-          className={`ai-toggle ${aiEnabled ? 'ai-toggle-on' : ''}`}
-          onClick={onToggleAI}
+          className={`ai-toggle ${claude ? 'ai-toggle-on' : ''}`}
+          onClick={onOpenSettings}
           disabled={isActive}
-          title={aiEnabled
-            ? 'AI summaries on: captured text is sent to the Claude API once per session. Click for local-only.'
-            : 'AI summaries off: summaries are generated locally with heuristics. Click to enable AI.'}
+          title={claude
+            ? `Summaries by ${modelLabel(aiSettings.model)} with your API key. Click to change.`
+            : 'Summaries are written on this device. Click to use Claude with your own API key.'}
         >
-          AI {aiEnabled ? 'on' : 'off'}
+          Settings{claude ? ` · ${modelLabel(aiSettings.model).replace('Claude ', '')}` : ''}
         </button>
         <button className="history-btn" onClick={onOpenHistory} disabled={isActive} title="Session history">
           History

@@ -2,27 +2,36 @@ import { useState } from 'react'
 import type { SessionSummary, AIStatus, SavedSession } from '../types'
 import { downloadMarkdown, downloadJSON, copyToClipboard } from '../services/exportService'
 import { generateId } from '../services/sessionStorage'
+import { CLAUDE_MODELS } from '../services/aiSettings'
 
 interface SummaryViewProps {
   summary: SessionSummary | null
   aiStatus: AIStatus
+  aiError: string | null
+  onOpenSettings: () => void
   onDismiss: () => void
 }
 
-function aiStatusBadge(status: AIStatus): { label: string; className: string } {
+function modelName(id: string | undefined): string {
+  if (!id) return 'Claude'
+  // Responses can name a dated or fallback model; match on the family prefix
+  return CLAUDE_MODELS.find(m => id.startsWith(m.id))?.label ?? id
+}
+
+function aiStatusBadge(status: AIStatus, aiError: string | null, aiModel: string | undefined): { label: string; className: string } {
   switch (status) {
     case 'loading':
-      return { label: 'Generating AI summary…', className: 'summary-badge summary-badge-loading' }
+      return { label: 'Writing a clearer summary with Claude…', className: 'summary-badge summary-badge-loading' }
     case 'done':
-      return { label: 'AI summary', className: 'summary-badge summary-badge-ai' }
+      return { label: `Summary by ${modelName(aiModel)}`, className: 'summary-badge summary-badge-ai' }
     case 'failed':
-      return { label: 'Local summary — AI unavailable', className: 'summary-badge summary-badge-local' }
+      return { label: `On-device summary — ${aiError ?? 'Claude unavailable'}`, className: 'summary-badge summary-badge-error' }
     default:
-      return { label: 'Local summary', className: 'summary-badge summary-badge-local' }
+      return { label: 'On-device summary', className: 'summary-badge summary-badge-local' }
   }
 }
 
-export function SummaryView({ summary, aiStatus, onDismiss }: SummaryViewProps) {
+export function SummaryView({ summary, aiStatus, aiError, onOpenSettings, onDismiss }: SummaryViewProps) {
   const [copied, setCopied] = useState(false)
   const [rawOpen, setRawOpen] = useState(false)
 
@@ -45,7 +54,7 @@ export function SummaryView({ summary, aiStatus, onDismiss }: SummaryViewProps) 
     ...inference.actionItems.map(a => ({ text: a, kind: 'action' as const })),
   ]
 
-  const badge = aiStatusBadge(aiStatus)
+  const badge = aiStatusBadge(aiStatus, aiError, summary.aiModel)
 
   const handleExportJSON = () => {
     const now = Date.now()
@@ -85,6 +94,9 @@ export function SummaryView({ summary, aiStatus, onDismiss }: SummaryViewProps) 
           {/* Compact stats bar */}
           <div className="summary-stats-bar">
             <span className={badge.className}>{badge.label}</span>
+            {aiStatus === 'failed' && (
+              <button className="settings-link" onClick={onOpenSettings}>Open settings</button>
+            )}
             <span className="stats-bar-sep">&middot;</span>
             <span>{summary.duration}</span>
             <span className="stats-bar-sep">&middot;</span>

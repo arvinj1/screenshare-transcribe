@@ -161,10 +161,11 @@ function extractActionItems(text: string): string[] {
 function extractiveSummarize(text: string, maxSentences = 5): string[] {
   // Split into sentences
   const sentences = text
-    .replace(/\n+/g, '. ')
+    .replace(/([.!?])?\n+/g, (_, end) => (end ? `${end} ` : '. ')) // line breaks end sentences, without doubling "."
     .split(/(?<=[.!?])\s+/)
     .map(s => s.trim())
     .filter(s => {
+      if (s.startsWith('---')) return false // section separators like "--- Audio Transcript ---"
       const wordCount = s.split(/\s+/).length
       return wordCount >= 4 && wordCount <= 50 && s.length > 15
     })
