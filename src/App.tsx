@@ -73,7 +73,7 @@ function App() {
     if (isSharing && mode === 'screen-ocr') {
       startAudio((segment) => {
         if (segment.isFinal) {
-          setAudioSegments(prev => [...prev.slice(-199), segment])
+          setAudioSegments(prev => [...prev, segment])
         }
       })
     }
@@ -123,7 +123,7 @@ function App() {
     setIsRecordingAudio(true)
     startAudio((segment) => {
       if (segment.isFinal) {
-        setAudioSegments(prev => [...prev.slice(-199), segment])
+        setAudioSegments(prev => [...prev, segment])
       }
     })
   }, [startAudio])

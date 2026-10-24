@@ -73,7 +73,7 @@ function buildSlides(results: OCRResult[], audioSegments: AudioSegment[] = []): 
 
   // Assign any audio that occurred before the first slide
   if (slides.length > 0 && results.length > 0) {
-    const firstSlideStart = Math.min(...results.map(r => r.timestamp))
+    const firstSlideStart = results[0].timestamp // results are chronological
     const preAudio = audioSegments
       .filter(s => s.isFinal && s.timestamp < firstSlideStart)
       .map(s => s.text)

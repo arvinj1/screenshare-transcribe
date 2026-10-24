@@ -1,6 +1,10 @@
 import { useEffect, useRef, useMemo } from 'react'
 import type { OCRResult, AudioSegment } from '../types'
 
+// The live panel only renders the most recent slides so long sessions stay
+// responsive; the summary and export still cover the whole session.
+const MAX_VISIBLE_SLIDES = 50
+
 interface SlideGroup {
   slideNumber: number
   bestText: string
@@ -36,8 +40,8 @@ export function OCRResultList({ results, audioSegments, isProcessing }: OCRResul
 
     const slideNumbers = [...slideMap.keys()].sort((a, b) => a - b)
 
-    // Audio before first OCR frame
-    const firstOcrTime = Math.min(...results.map(r => r.timestamp))
+    // Audio before first OCR frame (results arrive in chronological order)
+    const firstOcrTime = results[0].timestamp
     const pre = finalAudio.filter(s => s.timestamp < firstOcrTime)
 
     const groups: SlideGroup[] = slideNumbers.map((slideNumber, i) => {
@@ -71,6 +75,9 @@ export function OCRResultList({ results, audioSegments, isProcessing }: OCRResul
     }
   }, [slideGroups, audioSegments])
 
+  const hiddenSlideCount = Math.max(0, slideGroups.length - MAX_VISIBLE_SLIDES)
+  const visibleSlideGroups = hiddenSlideCount > 0 ? slideGroups.slice(hiddenSlideCount) : slideGroups
+
   if (results.length === 0 && audioSegments.length === 0 && !isProcessing) {
     return (
       <div className="ocr-result-list empty">
@@ -81,8 +88,18 @@ export function OCRResultList({ results, audioSegments, isProcessing }: OCRResul
 
   return (
     <div className="ocr-result-list" ref={containerRef}>
+      {hiddenSlideCount > 0 && (
+        <div className="slide-card slide-card-pre">
+          <div className="slide-card-header">
+            <span className="slide-card-label">
+              {hiddenSlideCount} earlier slide{hiddenSlideCount !== 1 ? 's' : ''} hidden — still included in the summary and export
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Audio before first capture */}
-      {preAudio.length > 0 && (
+      {hiddenSlideCount === 0 && preAudio.length > 0 && (
         <div className="slide-card slide-card-pre">
           <div className="slide-card-header">
             <span className="slide-card-label">Before first capture</span>
@@ -99,7 +116,7 @@ export function OCRResultList({ results, audioSegments, isProcessing }: OCRResul
       )}
 
       {/* Slide-grouped cards */}
-      {slideGroups.map(group => (
+      {visibleSlideGroups.map(group => (
         <div key={group.slideNumber} className="slide-card">
           <div className="slide-card-header">
             <span className="slide-card-label">Slide {group.slideNumber}</span>
