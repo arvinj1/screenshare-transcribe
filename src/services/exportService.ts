@@ -1,4 +1,5 @@
-import type { SessionSummary, SavedSession } from '../types'
+import type { AINotes, SessionSummary, SavedSession } from '../types'
+import { slideLabel } from './notesFormat'
 
 function sanitizeFilename(name: string): string {
   return name.replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'session'
@@ -23,6 +24,34 @@ function downloadBlob(content: string, mimeType: string, filename: string): void
   URL.revokeObjectURL(url)
 }
 
+function section(title: string, items: string[]): string[] {
+  return items.length > 0 ? [`## ${title}`, '', ...items, ''] : []
+}
+
+function detailedNotesMarkdown(notes: AINotes, keyPoints: string[]): string[] {
+  const out: string[] = []
+  out.push(...section('Key points', keyPoints.map(p => `- ${p}`)))
+  out.push(...section('Themes', notes.themes.map(t => `- **${t.name}**${t.slides.length ? ` (${slideLabel(t.slides)})` : ''}: ${t.summary}`)))
+  out.push(...section('Decisions', notes.decisions.map(d => `- ${d}`)))
+  out.push(...section('Action items', notes.actionItems.map(a => {
+    const meta = [a.owner.trim() && `owner: ${a.owner.trim()}`, a.due.trim() && `due: ${a.due.trim()}`].filter(Boolean).join(', ')
+    return `- [ ] ${a.task}${meta ? ` (${meta})` : ''}`
+  })))
+  out.push(...section('Open questions and risks', notes.openQuestions.map(q => `- ${q}`)))
+  out.push(...section('Key numbers', notes.keyNumbers.map(n => `- **${n.value}**: ${n.context}`)))
+  if (notes.slideNotes.length > 0) {
+    out.push('## Slide-by-slide notes', '')
+    for (const n of notes.slideNotes) {
+      out.push(`### ${n.title} (${slideLabel(n.slides)})`, '')
+      if (n.shown) out.push(`- **Shown:** ${n.shown}`)
+      if (n.said) out.push(`- **Said:** ${n.said}`)
+      if (n.takeaway) out.push(`- **Takeaway:** ${n.takeaway}`)
+      out.push('')
+    }
+  }
+  return out
+}
+
 export function generateMarkdown(summary: SessionSummary): string {
   const lines: string[] = []
   const { inference } = summary
@@ -42,11 +71,15 @@ export function generateMarkdown(summary: SessionSummary): string {
     lines.push('')
   }
 
-  // Key Insights (merged key sentences + action items)
+  if (summary.aiNotes) {
+    lines.push(...detailedNotesMarkdown(summary.aiNotes, inference.keySentences))
+  }
+
+  // Key Insights (merged key sentences + action items) — detailed notes already cover these
   const insights: string[] = []
   for (const s of inference.keySentences) insights.push(`- ${s}`)
   for (const a of inference.actionItems) insights.push(`- [ ] ${a}`)
-  if (insights.length > 0) {
+  if (!summary.aiNotes && insights.length > 0) {
     lines.push('## Key Insights')
     lines.push('')
     lines.push(...insights)
@@ -55,7 +88,7 @@ export function generateMarkdown(summary: SessionSummary): string {
 
   // Per-slide timeline
   if (summary.slides.length > 0) {
-    lines.push('## Slide Timeline')
+    lines.push(summary.aiNotes ? '## Raw slide text and transcript' : '## Slide Timeline')
     lines.push('')
     for (const slide of summary.slides) {
       lines.push(`### Slide ${slide.slideNumber}`)

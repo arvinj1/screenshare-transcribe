@@ -3,6 +3,7 @@ import type { SessionSummary, AIStatus, SavedSession } from '../types'
 import { downloadMarkdown, downloadJSON, copyToClipboard } from '../services/exportService'
 import { generateId } from '../services/sessionStorage'
 import { CLAUDE_MODELS } from '../services/aiSettings'
+import { paragraphs, slideLabel } from '../services/notesFormat'
 
 interface SummaryViewProps {
   summary: SessionSummary | null
@@ -34,10 +35,12 @@ function aiStatusBadge(status: AIStatus, aiError: string | null, aiModel: string
 export function SummaryView({ summary, aiStatus, aiError, onOpenSettings, onDismiss }: SummaryViewProps) {
   const [copied, setCopied] = useState(false)
   const [rawOpen, setRawOpen] = useState(false)
+  const [captureOpen, setCaptureOpen] = useState(false)
 
   if (!summary) return null
 
   const { inference } = summary
+  const notes = summary.aiNotes
   const totalWords = summary.wordCount + summary.audioWordCount
 
   const handleCopy = async () => {
@@ -114,12 +117,16 @@ export function SummaryView({ summary, aiStatus, aiError, onOpenSettings, onDism
           {/* AI narrative — hero element */}
           {inference.narrative && (
             <section className="summary-section narrative-section">
-              <div className="narrative-box">{inference.narrative}</div>
+              <div className="narrative-box">
+                {paragraphs(inference.narrative).map((p, i) => <p key={i}>{p}</p>)}
+              </div>
             </section>
           )}
 
+          {notes && <DetailedNotes notes={notes} keyPoints={inference.keySentences} />}
+
           {/* Key Insights */}
-          {insights.length > 0 && (
+          {!notes && insights.length > 0 && (
             <section className="summary-section">
               <h3>Key Insights</h3>
               <ul className="insights-list">
@@ -132,10 +139,17 @@ export function SummaryView({ summary, aiStatus, aiError, onOpenSettings, onDism
             </section>
           )}
 
-          {/* Slide Timeline */}
+          {/* Slide Timeline (the raw capture, tucked away when Claude notes exist) */}
           {summary.slides.length > 0 && (
             <section className="summary-section">
-              <h3>Slide Timeline</h3>
+              {notes ? (
+                <button className="raw-data-toggle" onClick={() => setCaptureOpen(o => !o)}>
+                  {captureOpen ? 'Hide' : 'Show'} raw slide text and transcript
+                </button>
+              ) : (
+                <h3>Slide Timeline</h3>
+              )}
+              {(!notes || captureOpen) && (
               <div className="summary-timeline">
                 {summary.slides.map(slide => (
                   <div key={slide.slideNumber} className="summary-timeline-card">
@@ -162,6 +176,7 @@ export function SummaryView({ summary, aiStatus, aiError, onOpenSettings, onDism
                   </div>
                 ))}
               </div>
+              )}
             </section>
           )}
 
@@ -203,5 +218,103 @@ export function SummaryView({ summary, aiStatus, aiError, onOpenSettings, onDism
         </div>
       </div>
     </div>
+  )
+}
+
+function DetailedNotes({ notes, keyPoints }: { notes: NonNullable<SessionSummary['aiNotes']>; keyPoints: string[] }) {
+  return (
+    <>
+      {keyPoints.length > 0 && (
+        <section className="summary-section">
+          <h3>Key points</h3>
+          <ul className="insights-list">
+            {keyPoints.map((p, i) => <li key={i} className="insight-point">{p}</li>)}
+          </ul>
+        </section>
+      )}
+
+      {notes.themes.length > 0 && (
+        <section className="summary-section">
+          <h3>Themes</h3>
+          <div className="notes-themes">
+            {notes.themes.map((t, i) => (
+              <div key={i} className="notes-card">
+                <div className="notes-card-header">
+                  <strong>{t.name}</strong>
+                  {t.slides.length > 0 && <span className="notes-chip">{slideLabel(t.slides)}</span>}
+                </div>
+                <p>{t.summary}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {notes.decisions.length > 0 && (
+        <section className="summary-section">
+          <h3>Decisions</h3>
+          <ul className="insights-list">
+            {notes.decisions.map((d, i) => <li key={i} className="insight-point">{d}</li>)}
+          </ul>
+        </section>
+      )}
+
+      {notes.actionItems.length > 0 && (
+        <section className="summary-section">
+          <h3>Action items</h3>
+          <ul className="insights-list">
+            {notes.actionItems.map((a, i) => (
+              <li key={i} className="insight-action">
+                {a.task}
+                {a.owner.trim() && <span className="notes-chip">{a.owner}</span>}
+                {a.due.trim() && <span className="notes-chip">by {a.due}</span>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {notes.openQuestions.length > 0 && (
+        <section className="summary-section">
+          <h3>Open questions and risks</h3>
+          <ul className="insights-list">
+            {notes.openQuestions.map((q, i) => <li key={i} className="insight-point">{q}</li>)}
+          </ul>
+        </section>
+      )}
+
+      {notes.keyNumbers.length > 0 && (
+        <section className="summary-section">
+          <h3>Key numbers</h3>
+          <dl className="notes-numbers">
+            {notes.keyNumbers.map((n, i) => (
+              <div key={i}>
+                <dt>{n.value}</dt>
+                <dd>{n.context}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+
+      {notes.slideNotes.length > 0 && (
+        <section className="summary-section">
+          <h3>Slide-by-slide notes</h3>
+          <div className="notes-slides">
+            {notes.slideNotes.map((n, i) => (
+              <div key={i} className="notes-card">
+                <div className="notes-card-header">
+                  <strong>{n.title}</strong>
+                  <span className="notes-chip">{slideLabel(n.slides)}</span>
+                </div>
+                {n.shown && <p><span className="notes-label">Shown</span>{n.shown}</p>}
+                {n.said && <p><span className="notes-label">Said</span>{n.said}</p>}
+                {n.takeaway && <p className="notes-takeaway"><span className="notes-label">Takeaway</span>{n.takeaway}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </>
   )
 }

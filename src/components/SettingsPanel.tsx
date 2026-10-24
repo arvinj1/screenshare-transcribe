@@ -6,6 +6,7 @@ import {
   modelLabel,
   type AISettings,
   type ClaudeModelId,
+  type SummaryDetail,
   type SummaryMode,
 } from '../services/aiSettings'
 
@@ -39,6 +40,7 @@ export function SettingsPanel({ settings, onSave, onForgetKey, onClose }: Settin
   const [apiKey, setApiKey] = useState(settings.apiKey)
   const [rememberKey, setRememberKey] = useState(settings.rememberKey)
   const [model, setModel] = useState<ClaudeModelId>(settings.model)
+  const [detail, setDetail] = useState<SummaryDetail>(settings.detail)
   const [showKey, setShowKey] = useState(false)
   const [test, setTest] = useState<TestState>({ status: 'idle' })
   // Bumped whenever the key or model changes, so a slow test result for
@@ -113,7 +115,7 @@ export function SettingsPanel({ settings, onSave, onForgetKey, onClose }: Settin
   }
 
   const handleSave = () => {
-    onSave({ mode, apiKey: trimmedKey, rememberKey, model })
+    onSave({ mode, apiKey: trimmedKey, rememberKey, model, detail })
     onClose()
   }
 
@@ -244,14 +246,31 @@ export function SettingsPanel({ settings, onSave, onForgetKey, onClose }: Settin
                       />
                       <span>
                         <strong>{m.label}</strong> — {m.description}
-                        <span className="settings-cost">{m.approxCost} per summary</span>
+                        <span className="settings-cost">{m.approxCost[detail]} per summary</span>
                       </span>
                     </label>
                   ))}
                 </div>
                 <p className="settings-help">
-                  Costs are rough estimates for a typical session at Anthropic’s list prices; long sessions cost more.
+                  Costs are rough estimates for a typical 10-minute session at Anthropic’s list prices; longer sessions cost more.
                 </p>
+              </section>
+
+              <section className="settings-section">
+                <h3>How much detail</h3>
+                <label className={`settings-choice ${detail === 'detailed' ? 'settings-choice-active' : ''}`}>
+                  <input type="radio" name="detail" checked={detail === 'detailed'} onChange={() => setDetail('detailed')} />
+                  <span>
+                    <strong>Detailed notes</strong> (recommended) — a threaded overview, notes for every slide pairing what
+                    was shown with what was said, themes, decisions, action items with owners, open questions and key numbers
+                  </span>
+                </label>
+                <label className={`settings-choice ${detail === 'brief' ? 'settings-choice-active' : ''}`}>
+                  <input type="radio" name="detail" checked={detail === 'brief'} onChange={() => setDetail('brief')} />
+                  <span>
+                    <strong>Brief recap</strong> — a short overview, key points and action items; faster and cheaper
+                  </span>
+                </label>
               </section>
 
               <section className="settings-section">

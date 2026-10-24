@@ -8,20 +8,23 @@
 
 export type SummaryMode = 'local' | 'claude'
 
+/** Brief: a short recap. Detailed: threaded notes with slide-by-slide notes, themes, decisions and more. */
+export type SummaryDetail = 'brief' | 'detailed'
+
 export type ClaudeModelId = 'claude-opus-5-5' | 'claude-sonnet-5-5' | 'claude-haiku-5-5'
 
 export interface ClaudeModelOption {
   id: ClaudeModelId
   label: string
   description: string
-  /** Rough cost of one typical session summary, at list prices. */
-  approxCost: string
+  /** Rough cost of one typical (~10 minute) session summary, at list prices. */
+  approxCost: Record<SummaryDetail, string>
 }
 
 export const CLAUDE_MODELS: ClaudeModelOption[] = [
-  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', description: 'Best at reading through noisy OCR and speech', approxCost: '~7¢' },
-  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', description: 'Balanced quality and speed', approxCost: '~3¢' },
-  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', description: 'Fastest and cheapest', approxCost: '~0.2¢' },
+  { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', description: 'Best at reading through noisy OCR and speech', approxCost: { brief: '~7¢', detailed: '~15¢' } },
+  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', description: 'Balanced quality and speed', approxCost: { brief: '~3¢', detailed: '~8¢' } },
+  { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', description: 'Fastest and cheapest', approxCost: { brief: '~0.2¢', detailed: '~0.4¢' } },
 ]
 
 export const DEFAULT_MODEL: ClaudeModelId = 'claude-opus-5-5'
@@ -34,11 +37,13 @@ export interface AISettings {
   apiKey: string
   rememberKey: boolean
   model: ClaudeModelId
+  detail: SummaryDetail
 }
 
 const MODE_KEY = 'st-summary-mode'
 const API_KEY_KEY = 'st-anthropic-api-key'
 const MODEL_KEY = 'st-claude-model'
+const DETAIL_KEY = 'st-summary-detail'
 // Written by earlier versions (AI toggle backed by a server key); cleared on save
 const LEGACY_AI_KEY = 'st-ai-summaries-enabled'
 
@@ -73,6 +78,7 @@ export function loadAISettings(): AISettings {
     apiKey: remembered ?? sessionKey ?? memoryKey,
     rememberKey: remembered !== null,
     model: CLAUDE_MODELS.some(m => m.id === model) ? (model as ClaudeModelId) : DEFAULT_MODEL,
+    detail: read(local, DETAIL_KEY) === 'brief' ? 'brief' : 'detailed',
   }
 }
 
@@ -80,6 +86,7 @@ export function saveAISettings(settings: AISettings): void {
   const key = settings.apiKey.trim()
   write(local, MODE_KEY, settings.mode)
   write(local, MODEL_KEY, settings.model)
+  write(local, DETAIL_KEY, settings.detail)
   write(local, LEGACY_AI_KEY, null)
   // Keep the key in exactly one place
   write(local, API_KEY_KEY, key && settings.rememberKey ? key : null)
