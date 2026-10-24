@@ -79,7 +79,9 @@ export function useOCR(): UseOCRReturn {
           entities,
         }
 
-        setResults(prev => [...prev.slice(-99), newResult])
+        // Keep every capture: the summary and export are built from the full
+        // session. (The live panel limits what it renders instead.)
+        setResults(prev => [...prev, newResult])
       }
     } catch (err) {
       console.error('OCR processing error:', err)

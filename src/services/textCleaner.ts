@@ -27,10 +27,18 @@ const VALID_SHORT_WORDS = new Set([
   'so', 'to', 'up', 'us', 'we', 'vs',
 ])
 
+// Numbers worth keeping even though they have no letters: slide numbers,
+// years, percentages, prices, times, dates, versions ("7:", "2025", "45%",
+// "$1,200", "3.5", "10:30", "1/15/24", "#3", "(2)").
+const NUMBER_TOKEN = /^[(#$€£¥+-]?\d+(?:[.,:/-]\d+)*[%)]?[.,:;)]?$/
+
 /**
  * Check if a single word looks like valid text vs OCR noise
  */
 function isValidWord(word: string): boolean {
+  // ...but not a run of one repeated digit ("1111" is usually misread "||||")
+  if (NUMBER_TOKEN.test(word)) return !/^\D*(\d)\1{3,}\D*$/.test(word)
+
   const lower = word.toLowerCase().replace(/[^a-z0-9]/g, '')
 
   // Keep known short words
@@ -152,7 +160,7 @@ export function extractKeywords(text: string, topN = 10): string[] {
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
-    .filter(w => w.length >= 3 && !stopWords.has(w))
+    .filter(w => w.length >= 3 && !stopWords.has(w) && !/^\d+$/.test(w)) // bare numbers aren't topics
 
   const freq = new Map<string, number>()
   for (const word of words) {

@@ -3,7 +3,6 @@ import type { SavedSession, SessionSummary } from '../types'
 const DB_NAME = 'screenshare-transcribe'
 const DB_VERSION = 1
 const STORE = 'sessions'
-const MAX_SLIDES_PER_SESSION = 200
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -48,14 +47,6 @@ function defaultTitle(summary: SessionSummary): string {
   return keywords.length > 0 ? `${keywords} — ${date}` : `Session — ${date}`
 }
 
-/** Trim heavyweight fields so long sessions respect browser storage limits. */
-function trimSummary(summary: SessionSummary): SessionSummary {
-  return {
-    ...summary,
-    slides: summary.slides.slice(-MAX_SLIDES_PER_SESSION),
-  }
-}
-
 export async function saveSession(summary: SessionSummary): Promise<SavedSession> {
   const now = Date.now()
   const session: SavedSession = {
@@ -63,7 +54,9 @@ export async function saveSession(summary: SessionSummary): Promise<SavedSession
     title: defaultTitle(summary),
     createdAt: now,
     updatedAt: now,
-    summary: trimSummary(summary),
+    // Store the full session; a summary is text only (well under 1 MB even for
+    // hours of capture), and a quota failure surfaces via storageError.
+    summary,
   }
   await tx('readwrite', store => store.put(session))
   return session
