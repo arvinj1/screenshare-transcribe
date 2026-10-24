@@ -213,7 +213,7 @@ Space isn't a concern: a 2-hour session takes well under 1 MB.
 | Screen video and frames | **Never leaves your browser.** OCR runs locally. |
 | OCR text, summaries, history | Stored only in this browser's IndexedDB, until you delete them ([details](#-session-history)). |
 | Microphone audio | Processed by the browser's speech recognition. **In Chrome and Edge this runs on the browser vendor's servers**, not on your device. |
-| Slide text and transcript (Claude on) | Sent **once per session, directly from your browser to Anthropic**, with your own API key ([details](#-whose-claude-account-is-used)). Never images, video or audio. Choose *On this device only* in Settings to keep everything local. |
+| Slide text and transcript (Claude on) | Sent **once per session, directly from your browser to Anthropic**, with your own API key ([details](#-whose-claude-account-is-used)). Never images, video or audio. Choose *On this device only* in Settings to keep slide text, transcripts and summaries on your device (speech recognition itself still uses your browser's service, see above). |
 | Your API key | Stored only in this browser: session storage by default (gone when the tab closes), or local storage if you tick *Remember on this device*. Sent only to `api.anthropic.com`. |
 
 There is no app server: Vercel only serves static files, so nothing you capture passes through it.

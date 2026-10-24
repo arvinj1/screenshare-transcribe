@@ -152,7 +152,8 @@ export function SettingsPanel({ settings, onSave, onForgetKey, onClose }: Settin
             <label className={`settings-choice ${mode === 'local' ? 'settings-choice-active' : ''}`}>
               <input type="radio" name="mode" checked={mode === 'local'} onChange={() => setMode('local')} />
               <span>
-                <strong>On this device only</strong> — free, and nothing leaves your browser
+                <strong>On this device only</strong> — free; summaries are written here, and no session text is sent for summarizing.
+                <span className="settings-hint"> (Chrome and Edge still send microphone audio to their own speech service to transcribe it.)</span>
               </span>
             </label>
             <label className={`settings-choice ${mode === 'claude' ? 'settings-choice-active' : ''}`}>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { AppMode } from '../types'
 import { isClaudeReady, maskKey, modelLabel, type AISettings } from '../services/aiSettings'
+import { detectSupport, startBlockedReason } from '../services/browserSupport'
 
 const DETAILS_KEY = 'st-intro-details-hidden'
 
@@ -20,19 +21,6 @@ function writeDetailsHidden(hidden: boolean): void {
   }
 }
 
-interface BrowserSupport {
-  screenCapture: boolean
-  speech: boolean
-}
-
-function detectSupport(): BrowserSupport {
-  const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }
-  return {
-    screenCapture: typeof navigator.mediaDevices?.getDisplayMedia === 'function',
-    speech: Boolean(w.SpeechRecognition || w.webkitSpeechRecognition),
-  }
-}
-
 interface IntroPanelProps {
   mode: AppMode
   aiSettings: AISettings
@@ -45,6 +33,9 @@ export function IntroPanel({ mode, aiSettings, onStart, onOpenSettings }: IntroP
   const [support] = useState(detectSupport)
   const audioOnly = mode === 'audio-only'
   const claude = isClaudeReady(aiSettings)
+  const blockedReason = startBlockedReason(mode, support)
+  // Screen mode still works without speech, just with no transcript
+  const speechWarning = !audioOnly && support.screenCapture && !support.speech
 
   const toggleDetails = () => {
     setDetailsHidden(prev => {
@@ -90,15 +81,15 @@ export function IntroPanel({ mode, aiSettings, onStart, onOpenSettings }: IntroP
         ))}
       </ol>
 
-      {(!support.screenCapture && !audioOnly) || !support.speech ? (
+      {(blockedReason || speechWarning) && (
         <div className="intro-notice" role="note">
-          {!support.screenCapture && !audioOnly && <p>This browser can’t share its screen. Use Chrome or Edge on a computer.</p>}
-          {!support.speech && <p>This browser has no speech recognition, so you’ll get slide text without a transcript. Chrome or Edge work best.</p>}
+          {blockedReason && <p>{blockedReason}</p>}
+          {speechWarning && <p>This browser has no speech recognition, so you’ll get slide text without a transcript. Chrome or Edge work best.</p>}
         </div>
-      ) : null}
+      )}
 
       <div className="intro-actions">
-        <button className="btn btn-start intro-start" onClick={onStart} disabled={!audioOnly && !support.screenCapture}>
+        <button className="btn btn-start intro-start" onClick={onStart} disabled={blockedReason !== null}>
           {audioOnly ? 'Start Recording' : 'Start Sharing'}
         </button>
         <div className="intro-summary-mode">
