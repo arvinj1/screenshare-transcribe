@@ -26,6 +26,9 @@ export const CLAUDE_MODELS: ClaudeModelOption[] = [
 
 export const DEFAULT_MODEL: ClaudeModelId = 'claude-opus-5-5'
 
+/** Shown when the on-demand Claude client can't be downloaded. */
+export const CLIENT_LOAD_ERROR = 'Couldn’t load the Claude client — check your connection and reload the page'
+
 export interface AISettings {
   mode: SummaryMode
   apiKey: string

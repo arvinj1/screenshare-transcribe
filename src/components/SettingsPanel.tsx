@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   CLAUDE_MODELS,
+  CLIENT_LOAD_ERROR,
   maskKey,
+  modelLabel,
   type AISettings,
   type ClaudeModelId,
   type SummaryMode,
@@ -14,7 +16,23 @@ interface SettingsPanelProps {
   onClose: () => void
 }
 
-type TestState = { status: 'idle' } | { status: 'testing' } | { status: 'done'; ok: boolean; message: string }
+type TestState =
+  | { status: 'idle' }
+  | { status: 'testing' }
+  | { status: 'done'; ok: boolean; message: string; model: ClaudeModelId }
+
+const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), a[href], summary, [tabindex]:not([tabindex="-1"])'
+
+/** What Tab can actually reach: visible, and only the checked radio of a group that has one. */
+function isTabbable(el: HTMLElement): boolean {
+  if (el.getClientRects().length === 0) return false // hidden, e.g. inside a closed <details>
+  if (el instanceof HTMLInputElement && el.type === 'radio' && !el.checked) {
+    const group = el.form ?? el.closest('[role="dialog"]')
+    const hasChecked = group?.querySelector(`input[type="radio"][name="${el.name}"]:checked`)
+    return !hasChecked
+  }
+  return true
+}
 
 export function SettingsPanel({ settings, onSave, onForgetKey, onClose }: SettingsPanelProps) {
   const [mode, setMode] = useState<SummaryMode>(settings.mode)
@@ -23,22 +41,75 @@ export function SettingsPanel({ settings, onSave, onForgetKey, onClose }: Settin
   const [model, setModel] = useState<ClaudeModelId>(settings.model)
   const [showKey, setShowKey] = useState(false)
   const [test, setTest] = useState<TestState>({ status: 'idle' })
+  // Bumped whenever the key or model changes, so a slow test result for
+  // earlier inputs is never shown against the current ones.
+  const testIdRef = useRef(0)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  // Latest onClose without re-running the focus effect (parents pass inline callbacks)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
+  // Modal focus: move focus into the dialog, keep Tab/Shift+Tab inside it,
+  // close on Escape, and give focus back to whatever opened it.
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const opener = document.activeElement as HTMLElement | null
+    const dialog = dialogRef.current
+    const focusables = () => (dialog ? [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(isTabbable) : [])
+    const initial = dialog?.querySelector<HTMLElement>('input[name="mode"]:checked') ?? focusables()[0]
+    initial?.focus()
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCloseRef.current()
+        return
+      }
+      if (e.key !== 'Tab' || !dialog) return
+      const items = focusables()
+      if (items.length === 0) return
+      const first = items[0]
+      const last = items[items.length - 1]
+      const active = document.activeElement as HTMLElement | null
+      if (!active || !dialog.contains(active)) {
+        e.preventDefault()
+        first.focus()
+      } else if (e.shiftKey && active === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      testIdRef.current += 1 // drop any test still running
+      opener?.focus?.()
+    }
+  }, [])
+
+  const resetTest = () => {
+    testIdRef.current += 1
+    setTest({ status: 'idle' })
+  }
 
   const trimmedKey = apiKey.trim()
   const looksLikeKey = trimmedKey.length === 0 || trimmedKey.startsWith('sk-ant-')
   const needsKey = mode === 'claude' && trimmedKey.length === 0
 
   const handleTest = async () => {
+    const testId = ++testIdRef.current
+    const testedModel = model
     setTest({ status: 'testing' })
-    const { testApiKey } = await import('../services/aiSummarizer')
-    const result = await testApiKey(trimmedKey, model)
-    setTest({ status: 'done', ...result })
+    let result: { ok: boolean; message: string }
+    try {
+      const { testApiKey } = await import('../services/aiSummarizer')
+      result = await testApiKey(trimmedKey, testedModel)
+    } catch {
+      result = { ok: false, message: CLIENT_LOAD_ERROR }
+    }
+    if (testId !== testIdRef.current) return // key or model changed meanwhile
+    setTest({ status: 'done', ...result, model: testedModel })
   }
 
   const handleSave = () => {
@@ -48,13 +119,14 @@ export function SettingsPanel({ settings, onSave, onForgetKey, onClose }: Settin
 
   const handleForget = () => {
     setApiKey('')
-    setTest({ status: 'idle' })
+    resetTest()
     onForgetKey()
   }
 
   return (
     <div className="summary-overlay" onClick={onClose}>
       <div
+        ref={dialogRef}
         className="summary-modal settings-modal"
         role="dialog"
         aria-modal="true"
@@ -101,7 +173,7 @@ export function SettingsPanel({ settings, onSave, onForgetKey, onClose }: Settin
                     type={showKey ? 'text' : 'password'}
                     placeholder="sk-ant-…"
                     value={apiKey}
-                    onChange={e => { setApiKey(e.target.value); setTest({ status: 'idle' }) }}
+                    onChange={e => { setApiKey(e.target.value); resetTest() }}
                     autoComplete="off"
                     spellCheck={false}
                     aria-label="Anthropic API key"
@@ -123,7 +195,7 @@ export function SettingsPanel({ settings, onSave, onForgetKey, onClose }: Settin
                 )}
                 {test.status === 'done' && (
                   <p className={`settings-status ${test.ok ? 'settings-status-ok' : 'settings-status-error'}`}>
-                    {test.ok ? `✓ ${test.message} with ${CLAUDE_MODELS.find(m => m.id === model)?.label}` : `✗ ${test.message}`}
+                    {test.ok ? `✓ ${test.message} with ${modelLabel(test.model)}` : `✗ ${test.message}`}
                   </p>
                 )}
                 {needsKey && <p className="settings-status settings-status-warn">Add a key to use Claude summaries.</p>}
@@ -167,7 +239,7 @@ export function SettingsPanel({ settings, onSave, onForgetKey, onClose }: Settin
                         type="radio"
                         name="model"
                         checked={model === m.id}
-                        onChange={() => { setModel(m.id); setTest({ status: 'idle' }) }}
+                        onChange={() => { setModel(m.id); resetTest() }}
                       />
                       <span>
                         <strong>{m.label}</strong> — {m.description}

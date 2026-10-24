@@ -2,7 +2,8 @@ import { useState, useCallback, useRef } from 'react'
 import type { OCRResult, AudioSegment, SessionSummary, SlideSummary, AIStatus } from '../types'
 import { extractKeywords } from '../services/textCleaner'
 import { inferFromText } from '../services/textInference'
-import { isClaudeReady, type AISettings } from '../services/aiSettings'
+import { isClaudeReady, CLIENT_LOAD_ERROR, type AISettings } from '../services/aiSettings'
+import type { AIResult } from '../services/aiSummarizer'
 
 interface UseSummaryReturn {
   summary: SessionSummary | null
@@ -110,9 +111,16 @@ export function useSummary(aiSettings: AISettings): UseSummaryReturn {
     const generation = generationRef.current
     setAIStatus('loading')
 
-    // Loaded on demand: the Claude SDK is only needed by people who use it
-    const { summarizeWithAI } = await import('../services/aiSummarizer')
-    const result = await summarizeWithAI(localSummary, settings)
+    // Loaded on demand: the Claude SDK is only needed by people who use it.
+    // If the download fails (offline, or a stale deploy), fail like any other
+    // Claude error so the session still settles and gets auto-saved.
+    let result: AIResult
+    try {
+      const { summarizeWithAI } = await import('../services/aiSummarizer')
+      result = await summarizeWithAI(localSummary, settings)
+    } catch {
+      result = { ok: false, error: CLIENT_LOAD_ERROR }
+    }
     if (generation !== generationRef.current) return // stale response
 
     if (!result.ok) {
