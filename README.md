@@ -28,7 +28,7 @@
 | 🖥️ **Live slide OCR** | Reads the text on screen every few seconds with [Tesseract.js](https://github.com/naptha/tesseract.js), running locally in a Web Worker. |
 | ⚡ **Change detection** | Compares tiny thumbnails first and only runs OCR when the screen actually changed — static slides cost almost nothing. |
 | 🎙️ **Speech, aligned to slides** | Transcribes your microphone with the Web Speech API and attaches each sentence to the slide that was on screen. |
-| 🧠 **Instant + Claude summaries** | An on-device summary (title, key points, action items, topics) appears the moment you stop. Add your own Anthropic API key in **Settings** and Claude rewrites it into a much clearer one. |
+| 🧠 **Instant + Claude notes** | An on-device summary appears the moment you stop. Add your own Anthropic API key in **Settings** and Claude writes **detailed, threaded notes**: an overview of how the session unfolded, notes for every slide pairing what was shown with what was said, themes, decisions, action items with owners, open questions and key numbers. |
 | 🗂️ **Session history** | Every session auto-saves in your browser, with no expiry. Search, rename, reopen, export, delete. [More](#-session-history) |
 | 📤 **Export** | Markdown, JSON, or copy to clipboard — with a per-slide timeline and the full transcript. |
 | ⏱️ **Long-session safe** | Keeps every capture and segment for the whole session; the live panel stays fast by showing only recent slides. |
@@ -172,8 +172,13 @@ Frames are also skipped while a previous OCR is still running, and OCR re-runs a
 #### 7. Alignment and summary
 [`useSummary`](src/hooks/useSummary.ts) groups captures by slide, picks the longest capture as each slide's text, and attaches every speech segment whose timestamp falls inside that slide's time window (speech before the first capture goes to slide 1). [`textInference`](src/services/textInference.ts) then classifies the content (presentation, code, terminal, article, chat, spreadsheet, email, documentation) and extracts headings, key sentences, action items and topic clusters for the instant local summary.
 
-#### 8. Claude summary (optional)
-With Claude chosen in **Settings**, [`aiSummarizer`](src/services/aiSummarizer.ts) sends the deduplicated slide text and transcript **from the browser straight to the Claude API**, using the user's own key and model choice (Opus 5.5, Sonnet 5.5 or Haiku 5.5). It asks for structured output (title, narrative, key points, action items, topics), and Opus and Sonnet can fall back to another model if a safety check declines. The Claude SDK is only downloaded when someone uses it. On any failure the on-device summary stays, and the summary shows why (for example, a rejected key or a spend limit).
+#### 8. Claude notes (optional)
+With Claude chosen in **Settings**, [`aiSummarizer`](src/services/aiSummarizer.ts) sends the session **from the browser straight to the Claude API**, using the user's own key and model choice (Opus 5.5, Sonnet 5.5 or Haiku 5.5). The Claude SDK is only downloaded when someone uses it.
+
+- **Detailed notes** (default) thread the session slide by slide: each slide's text is paired with what was said while it was on screen, so Claude can use the slide to fix speech errors ("windows" → "vendors"). [`sessionSignals`](src/services/sessionSignals.ts) adds measured facts: time on screen and words spoken per slide, terms that recur across slides, terms repeated on one slide, and numbers mentioned. Claude grounds the overview's claims about emphasis in that data. The result is a threaded overview, key points, themes (with the slides they span), slide-by-slide notes (*shown / said / takeaway*; long decks are grouped), decisions, action items with owner and due date, open questions and risks, and key numbers. Length scales with the session.
+- **Brief recap** returns a short overview, key points, action items and topics.
+
+Both use structured output, and Opus and Sonnet can fall back to another model if a safety check declines. On any failure the on-device summary stays, and the summary shows why (for example, a rejected key or a spend limit).
 
 #### 9. Storage and export
 [`sessionStorage`](src/services/sessionStorage.ts) saves the full summary to IndexedDB once it settles. [`exportService`](src/services/exportService.ts) produces Markdown (stats, narrative, insights, per-slide timeline with *what was said*, URLs, transcript) and JSON.
@@ -189,9 +194,9 @@ Every session is **saved automatically when you stop**: the summary, every slide
 | Action | What it does |
 |---|---|
 | **Open** | Click a title to see that session's summary again. |
-| **Search** | Looks through titles, slide text, transcripts, keywords, summaries and topics. |
+| **Search** | Looks through titles, slide text, transcripts, keywords, summaries, topics and Claude's notes. |
 | **Rename** | Give a session a clearer title. Claude summaries suggest one automatically. |
-| **Export MD** | A readable Markdown file: summary, key points, action items, slide-by-slide timeline with *what was said*, URLs and transcript. |
+| **Export MD** | A readable Markdown file: the summary and, with Claude's detailed notes, themes, decisions, action items with owners, open questions, key numbers and slide-by-slide notes; plus the raw slide timeline with *what was said*, URLs and transcript. |
 | **Export JSON** | All the session data, for backups or other tools. |
 | **Delete** | Removes the session from this browser permanently (asks to confirm). |
 
@@ -238,13 +243,13 @@ Any static host works too: run `npm run build` and serve `dist/`.
 - **You, the deployer, pay nothing** for anyone's summaries, and no key ever passes through your deployment.
 - Keys come from [console.anthropic.com](https://console.anthropic.com/settings/keys) and are billed per token. A Claude.ai Pro/Max/Team subscription does not include API usage.
 
-Rough cost of one typical session summary at list prices, shown in Settings next to each model:
+Rough cost of one typical (~10-minute) session at list prices, shown in Settings next to each model. Longer sessions cost more:
 
-| Model | Best for | Per summary |
-|---|---|---|
-| Claude Opus 5.5 (default) | Reading through noisy OCR and speech | ~7¢ |
-| Claude Sonnet 5.5 | Balance of quality and speed | ~3¢ |
-| Claude Haiku 5.5 | Speed and lowest cost | ~0.2¢ |
+| Model | Best for | Detailed notes | Brief recap |
+|---|---|---|---|
+| Claude Opus 5.5 (default) | Reading through noisy OCR and speech | ~15¢ | ~7¢ |
+| Claude Sonnet 5.5 | Balance of quality and speed | ~8¢ | ~3¢ |
+| Claude Haiku 5.5 | Speed and lowest cost | ~0.4¢ | ~0.2¢ |
 
 > [!TIP]
 > Create a **dedicated key with a spend limit** for this app. A key you choose to remember is kept in this browser's local storage, where anyone with access to the browser profile (or a malicious extension) could read it.
@@ -268,8 +273,8 @@ All the knobs, with where to change them:
 | New-slide similarity threshold | < 0.4 | [`useOCR.ts`](src/hooks/useOCR.ts) |
 | Slides rendered in the live panel | 50 most recent | [`OCRResultList.tsx`](src/components/OCRResultList.tsx) |
 | Long-session warning | 30 min | [`App.tsx`](src/App.tsx) |
-| Claude request timeout | 120 s | [`aiSummarizer.ts`](src/services/aiSummarizer.ts) |
-| Claude input cap | ~24,000 chars | [`aiSummarizer.ts`](src/services/aiSummarizer.ts) |
+| Claude request timeout | 240 s | [`aiSummarizer.ts`](src/services/aiSummarizer.ts) |
+| Claude input cap | ~120,000 chars detailed / ~24,000 brief | [`aiSummarizer.ts`](src/services/aiSummarizer.ts) |
 | Default Claude model | Opus 5.5 | [`aiSettings.ts`](src/services/aiSettings.ts) |
 
 ---
@@ -307,6 +312,7 @@ src/
     entityExtractor.ts    Emails, phones, dates, numbers, proper nouns
     aiSettings.ts         Summary mode, user's API key (browser storage), model choice
     aiSummarizer.ts       Browser → Claude API with the user's key (loaded on demand)
+    sessionSignals.ts     Measured facts for Claude: time per slide, recurring terms, numbers
     sessionStorage.ts     IndexedDB persistence and search
     exportService.ts      Markdown / JSON export
   components/             UI (header, on-page intro, settings, live panel, summary, history)
