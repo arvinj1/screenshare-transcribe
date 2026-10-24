@@ -6,13 +6,13 @@
 
 [![Live app](https://img.shields.io/badge/live%20app-screenshare--transcribe.vercel.app-000000?logo=vercel&logoColor=white)](https://screenshare-transcribe.vercel.app)
 [![CI](https://github.com/arvinj1/screenshare-transcribe/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arvinj1/screenshare-transcribe/actions/workflows/ci.yml)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Farvinj1%2Fscreenshare-transcribe&env=ANTHROPIC_API_KEY&envDescription=Optional%3A%20enables%20AI%20summaries%20via%20the%20Claude%20API)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Farvinj1%2Fscreenshare-transcribe)
 
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
 ![Tesseract.js](https://img.shields.io/badge/OCR-Tesseract.js%205-4B8BBE)
-![Claude](https://img.shields.io/badge/AI%20summaries-Claude%20API-D97757)
+![Claude](https://img.shields.io/badge/AI%20summaries-Claude%2C%20your%20own%20key-D97757)
 ![Local first](https://img.shields.io/badge/capture-local%20first-2EA44F)
 
 **[▶ Open the app](https://screenshare-transcribe.vercel.app)** · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [Privacy](#-privacy) · [Deploy](#-deploy-to-vercel) · [Whose Claude account?](#-whose-claude-account-is-used) · [Tuning](#-tuning-reference) · [FAQ](#-troubleshooting--faq)
@@ -28,7 +28,7 @@
 | 🖥️ **Live slide OCR** | Reads the text on screen every few seconds with [Tesseract.js](https://github.com/naptha/tesseract.js), running locally in a Web Worker. |
 | ⚡ **Change detection** | Compares tiny thumbnails first and only runs OCR when the screen actually changed — static slides cost almost nothing. |
 | 🎙️ **Speech, aligned to slides** | Transcribes your microphone with the Web Speech API and attaches each sentence to the slide that was on screen. |
-| 🧠 **Instant + AI summaries** | A local summary (title, key points, action items, topics) appears the moment you stop; with AI on, a Claude summary replaces it seconds later. |
+| 🧠 **Instant + Claude summaries** | An on-device summary (title, key points, action items, topics) appears the moment you stop. Add your own Anthropic API key in **Settings** and Claude rewrites it into a much clearer one. |
 | 🗂️ **Session history** | Every session auto-saves to your browser (IndexedDB). Search, rename, reopen, delete. |
 | 📤 **Export** | Markdown, JSON, or copy to clipboard — with a per-slide timeline and the full transcript. |
 | ⏱️ **Long-session safe** | Keeps every capture and segment for the whole session; the live panel stays fast by showing only recent slides. |
@@ -45,6 +45,7 @@
 3. Click **Start Sharing** (or **Start Recording** in Audio Only). The share picker opens on **Chrome Tab** — pick the tab with your slides or call.
    *Sharing a tab gives the cleanest text: there are no browser toolbars or menu bars for OCR to misread.*
 4. Allow the microphone when asked, then present or talk as usual. Text and speech appear live, grouped by slide.
+   *Optional:* open **Settings** first and add your Anthropic API key for Claude-written summaries.
 5. Click **Stop Sharing** (or the browser's own *Stop sharing* bar). Your summary appears, and the session saves to **History**.
 
 <details>
@@ -53,7 +54,7 @@
 - **Share a tab, not a window.** Window and screen capture include the tab strip, address bar and bookmarks, which OCR reads as noise.
 - **Bigger is better.** Present full screen or zoom in; small, low-contrast text is where OCR struggles.
 - **Remote presenter?** Speech comes from your *microphone*, so play their audio through speakers (not headphones) for it to be transcribed.
-- **Turn AI on** (header toggle) for a much more readable summary of noisy OCR and speech.
+- **Use Claude** (Settings → *Claude, with my API key*) for a much more readable summary of noisy OCR and speech.
 
 </details>
 
@@ -66,7 +67,7 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-Requires **Node 18+**. AI summaries need the serverless function — see [Deploy](#-deploy-to-vercel) for running it locally with `vercel dev`.
+Requires **Node 18+**. Everything, including Claude summaries, works with `npm run dev`: there's no server to run.
 
 ---
 
@@ -97,12 +98,11 @@ flowchart LR
         P --> Q[(IndexedDB<br/>history)]
     end
 
-    P -. "AI on: text only, once" .-> R[/api/summarize<br/>Vercel function/]
-    R -.-> S[Claude API]
+    P -. "Claude on: text only, once,<br/>with the user's own key" .-> S[Claude API<br/>api.anthropic.com]
     S -.-> P
 
     classDef remote fill:#fdf1ec,stroke:#D97757,color:#333;
-    class R,S remote;
+    class S remote;
 ```
 
 ### A session, step by step
@@ -115,7 +115,7 @@ sequenceDiagram
     participant OCR as Tesseract worker
     participant SR as Speech recognition
     participant DB as IndexedDB
-    participant API as /api/summarize
+    participant API as Claude API (your key)
 
     U->>App: Start Sharing → choose a tab
     App->>SR: start (continuous)
@@ -131,8 +131,8 @@ sequenceDiagram
     U->>App: Stop Sharing
     App->>App: build slides, align speech, local summary
     App-->>U: summary shown instantly
-    opt AI summaries on
-        App->>API: OCR text + transcript (once)
+    opt Claude summaries on (Settings)
+        App->>API: slide text + transcript (once, directly from the browser)
         API-->>App: title, narrative, key points, actions, topics
         App-->>U: summary upgraded
     end
@@ -172,8 +172,8 @@ Frames are also skipped while a previous OCR is still running, and OCR re-runs a
 #### 7. Alignment and summary
 [`useSummary`](src/hooks/useSummary.ts) groups captures by slide, picks the longest capture as each slide's text, and attaches every speech segment whose timestamp falls inside that slide's time window (speech before the first capture goes to slide 1). [`textInference`](src/services/textInference.ts) then classifies the content (presentation, code, terminal, article, chat, spreadsheet, email, documentation) and extracts headings, key sentences, action items and topic clusters for the instant local summary.
 
-#### 8. AI summary (optional)
-With AI on, [`aiSummarizer`](src/services/aiSummarizer.ts) posts the deduplicated slide text and transcript to [`api/summarize.ts`](api/summarize.ts), a Vercel function that calls the Claude API and returns a title, narrative, key points, action items and topics. The local summary stays if the call fails or takes longer than 45 s.
+#### 8. Claude summary (optional)
+With Claude chosen in **Settings**, [`aiSummarizer`](src/services/aiSummarizer.ts) sends the deduplicated slide text and transcript **from the browser straight to the Claude API**, using the user's own key and model choice (Opus 5.5, Sonnet 5.5 or Haiku 5.5). It asks for structured output (title, narrative, key points, action items, topics), and Opus and Sonnet can fall back to another model if a safety check declines. The Claude SDK is only downloaded when someone uses it. On any failure the on-device summary stays, and the summary shows why (for example, a rejected key or a spend limit).
 
 #### 9. Storage and export
 [`sessionStorage`](src/services/sessionStorage.ts) saves the full summary to IndexedDB once it settles. [`exportService`](src/services/exportService.ts) produces Markdown (stats, narrative, insights, per-slide timeline with *what was said*, URLs, transcript) and JSON.
@@ -189,54 +189,41 @@ With AI on, [`aiSummarizer`](src/services/aiSummarizer.ts) posts the deduplicate
 | Screen video and frames | **Never leaves your browser.** OCR runs locally. |
 | OCR text, summaries, history | Stored only in this browser's IndexedDB. |
 | Microphone audio | Processed by the browser's speech recognition. **In Chrome and Edge this runs on the browser vendor's servers**, not on your device. |
-| Captured *text* (AI on) | Sent **once per session** to `/api/summarize` → the Claude API, under the deployer's API key ([details](#-whose-claude-account-is-used)). Turn **AI off** in the header to keep text local. |
+| Slide text and transcript (Claude on) | Sent **once per session, directly from your browser to Anthropic**, with your own API key ([details](#-whose-claude-account-is-used)). Never images, video or audio. Choose *On this device only* in Settings to keep everything local. |
+| Your API key | Stored only in this browser: session storage by default (gone when the tab closes), or local storage if you tick *Remember on this device*. Sent only to `api.anthropic.com`. |
 
-The Anthropic API key lives only in the server environment; it never reaches the browser.
+There is no app server: Vercel only serves static files, so nothing you capture passes through it.
 
 ---
 
 ## 🚢 Deploy to Vercel
 
-The app is a static Vite build plus one serverless function, [`api/summarize.ts`](api/summarize.ts), which Vercel detects automatically — no `vercel.json` needed.
+The app is a fully static Vite build: no server code, no environment variables.
 
 1. Click **Deploy with Vercel** above, or import the repo at [vercel.com/new](https://vercel.com/new).
-2. Optionally add environment variables (below) to enable AI summaries.
-3. Deploy. Without a key the API returns `503` and the app quietly uses local summaries.
+2. Deploy. That's it. Pushes to `main` redeploy production automatically.
 
-| Variable | Required | Default | Purpose |
-|---|---|---|---|
-| `ANTHROPIC_API_KEY` | For AI summaries | — | Key from [console.anthropic.com](https://console.anthropic.com). |
-| `SUMMARIZE_MODEL` | No | `claude-haiku-4-5-20251001` | Claude model used for summaries. |
-
-<details>
-<summary><b>Run the API locally</b></summary>
-
-```bash
-npm i -g vercel
-echo "ANTHROPIC_API_KEY=sk-ant-..." > .env.local   # gitignored
-vercel dev
-```
-
-`npm run dev` alone serves the app without the API; AI summaries then fall back to local ones.
-
-</details>
+Any static host works too: run `npm run build` and serve `dist/`.
 
 ### 🔑 Whose Claude account is used?
 
-**The deployer's — never the end user's.** All Claude calls go through the server function, which signs them with the `ANTHROPIC_API_KEY` set in the Vercel project. So:
+**Each user's own.** Claude summaries are *bring your own key*:
 
-- **Users** need no Claude or Anthropic account, and never see or enter a key.
-- **The owner of that API key** (the Anthropic Console organization it belongs to) is billed for every AI summary, by anyone using that deployment.
-- It must be an **API key from [console.anthropic.com](https://console.anthropic.com)**, billed per token. A Claude.ai Pro/Max/Team subscription does not cover API usage.
-- **If you fork and deploy your own copy**, your key is used and you pay; with no key set, your copy runs fully local summaries for free.
+- **Users who want Claude summaries** paste their own Anthropic API key in **Settings**. Their browser calls Anthropic directly, so **they are billed**, by Anthropic, for their own summaries.
+- **Everyone else** gets the on-device summary, free, with no account needed.
+- **You, the deployer, pay nothing** for anyone's summaries, and no key ever passes through your deployment.
+- Keys come from [console.anthropic.com](https://console.anthropic.com/settings/keys) and are billed per token. A Claude.ai Pro/Max/Team subscription does not include API usage.
 
-This applies to any future Claude feature as well, such as vision OCR on the [roadmap](#-roadmap): it would go through the same server function and the same key.
+Rough cost of one typical session summary at list prices, shown in Settings next to each model:
 
-> [!NOTE]
-> The public deployment at [screenshare-transcribe.vercel.app](https://screenshare-transcribe.vercel.app) currently has **no API key configured**, so it uses local summaries only; the **AI on** toggle quietly falls back to them.
+| Model | Best for | Per summary |
+|---|---|---|
+| Claude Opus 5.5 (default) | Reading through noisy OCR and speech | ~7¢ |
+| Claude Sonnet 5.5 | Balance of quality and speed | ~3¢ |
+| Claude Haiku 5.5 | Speed and lowest cost | ~0.2¢ |
 
-> [!WARNING]
-> `/api/summarize` has no authentication or rate limiting yet. Anyone who finds your deployment URL can use it to spend your Anthropic credit. Add rate limiting before sharing a public deployment widely.
+> [!TIP]
+> Create a **dedicated key with a spend limit** for this app. A key you choose to remember is kept in this browser's local storage, where anyone with access to the browser profile (or a malicious extension) could read it.
 
 ---
 
@@ -257,8 +244,9 @@ All the knobs, with where to change them:
 | New-slide similarity threshold | < 0.4 | [`useOCR.ts`](src/hooks/useOCR.ts) |
 | Slides rendered in the live panel | 50 most recent | [`OCRResultList.tsx`](src/components/OCRResultList.tsx) |
 | Long-session warning | 30 min | [`App.tsx`](src/App.tsx) |
-| AI request timeout | 45 s | [`aiSummarizer.ts`](src/services/aiSummarizer.ts) |
-| AI input cap | ~24,000 chars | [`api/summarize.ts`](api/summarize.ts) |
+| Claude request timeout | 120 s | [`aiSummarizer.ts`](src/services/aiSummarizer.ts) |
+| Claude input cap | ~24,000 chars | [`aiSummarizer.ts`](src/services/aiSummarizer.ts) |
+| Default Claude model | Opus 5.5 | [`aiSettings.ts`](src/services/aiSettings.ts) |
 
 ---
 
@@ -278,8 +266,6 @@ Without speech recognition the app still works — you just get slides without t
 ## 📁 Project structure
 
 ```text
-api/
-  summarize.ts            Vercel function → Claude API (the only server code)
 src/
   App.tsx                 Session orchestration: modes, start/stop, auto-save
   hooks/
@@ -295,10 +281,11 @@ src/
     textCleaner.ts        Noise removal, similarity, keywords
     textInference.ts      Content type, key points, action items, topics
     entityExtractor.ts    Emails, phones, dates, numbers, proper nouns
-    aiSummarizer.ts       Client for /api/summarize
+    aiSettings.ts         Summary mode, user's API key (browser storage), model choice
+    aiSummarizer.ts       Browser → Claude API with the user's key (loaded on demand)
     sessionStorage.ts     IndexedDB persistence and search
     exportService.ts      Markdown / JSON export
-  components/             UI (header, live panel, summary, history, onboarding)
+  components/             UI (header, on-page intro, settings, live panel, summary, history)
 ```
 
 ### Scripts
@@ -344,11 +331,18 @@ Speech comes from the microphone, not the tab's audio. Play the call through spe
 </details>
 
 <details>
-<summary><b>AI summaries never appear</b></summary>
+<summary><b>Claude summaries never appear</b></summary>
 
-- With `npm run dev`, the API isn't running — use `vercel dev`.
-- On Vercel, check that `ANTHROPIC_API_KEY` is set (the function returns `503` without it).
-- Make sure the header toggle says **AI on**.
+- Open **Settings**, choose *Claude, with my API key*, add your key and press **Test key**.
+- If the summary says *Anthropic rejected this API key*, create a new key; if it mentions a rate or spend limit, check your [Anthropic Console](https://console.anthropic.com) limits and billing.
+- An unticked *Remember on this device* means the key is gone after you close the tab; add it again or tick the box.
+
+</details>
+
+<details>
+<summary><b>Is my API key safe?</b></summary>
+
+It's sent only to `api.anthropic.com`, never to this site's server (there isn't one). Unless you tick *Remember on this device* it lives in session storage and disappears when the tab closes. A remembered key sits in local storage, readable by anyone who can use that browser profile, so use a dedicated key with a spend limit and press **Forget key** on shared computers.
 
 </details>
 
@@ -363,9 +357,8 @@ Static slides are skipped by change detection, and the live panel only renders t
 
 ## 🧭 Roadmap
 
-- [ ] Rate limiting / auth for `/api/summarize`
 - [ ] Capture tab audio (not just the microphone)
-- [ ] Optional Claude vision OCR for changed slides (charts, small text)
+- [ ] Optional Claude vision OCR for changed slides (charts, small text), with the same bring-your-own key
 - [ ] Speech language selection (currently `en-US`)
 - [ ] Unit tests for cleaning, slide alignment and export
 
