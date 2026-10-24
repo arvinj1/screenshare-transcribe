@@ -6,7 +6,7 @@ function sanitizeFilename(name: string): string {
 }
 
 function uniqueFilename(title: string | undefined, ext: string): string {
-  const base = sanitizeFilename(title ?? 'session-summary')
+  const base = sanitizeFilename(title ?? 'deckjot-notes')
   const date = new Date().toISOString().slice(0, 10)
   const suffix = Math.random().toString(36).slice(2, 8)
   return `${base}-${date}-${suffix}.${ext}`

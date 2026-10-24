@@ -36,7 +36,13 @@ export function Header({
   const claude = isClaudeReady(aiSettings)
   return (
     <header className="header">
-      <h1>Screen Share Transcribe</h1>
+      <div className="header-brand">
+        <h1>
+          <img className="header-logo" src="/deckjot.svg" alt="" width="26" height="26" />
+          <span>Deck<span className="brand-jot">Jot</span></span>
+        </h1>
+        <span className="header-tagline">Capture what’s shown. Remember what’s said.</span>
+      </div>
       <div className="header-right">
         <div className={`mode-toggle ${isActive ? 'mode-toggle-disabled' : ''}`}>
           <button

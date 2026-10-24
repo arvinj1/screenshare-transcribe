@@ -1,5 +1,7 @@
 import type { SavedSession, SessionSummary } from '../types'
 
+// Keeps the app's original name on purpose: renaming the database would
+// hide every session people have already saved.
 const DB_NAME = 'screenshare-transcribe'
 const DB_VERSION = 1
 const STORE = 'sessions'

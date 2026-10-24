@@ -41,9 +41,42 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+.header-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
 .header h1 {
-  font-size: 1.25rem;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.3rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.header-logo {
+  display: block;
+  border-radius: 6px;
+}
+
+.brand-jot {
+  background: linear-gradient(135deg, #4f7dff, #8b5cf6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.header-tagline {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 900px) {
+  .header-tagline {
+    display: none;
+  }
 }
 
 .header-right {
