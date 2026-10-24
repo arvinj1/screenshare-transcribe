@@ -22,12 +22,16 @@ export function useScreenCapture(): UseScreenCaptureReturn {
         throw new Error('Screen sharing is not supported in this browser')
       }
 
+      // Open the picker on browser tabs: tab capture has no browser toolbars,
+      // tab strip, or OS menu bar for OCR to misread. Users can still pick a
+      // window or the whole screen. Hide this app's own tab from the list.
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
-          displaySurface: 'monitor',
+          displaySurface: 'browser',
         },
         audio: false,
-      })
+        selfBrowserSurface: 'exclude',
+      } as DisplayMediaStreamOptions)
 
       streamRef.current = stream
       setMediaStream(stream)
