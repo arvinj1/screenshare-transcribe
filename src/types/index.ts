@@ -8,6 +8,14 @@ export interface AudioSegment {
   confidence: number
 }
 
+export interface ExtractedEntities {
+  emails: string[]
+  dates: Array<{ value: string; normalized?: string }>
+  phones: string[]
+  numbers: Array<{ value: string; context: string }>
+  properNouns: string[]
+}
+
 export interface OCRResult {
   id: string
   timestamp: number
@@ -17,6 +25,16 @@ export interface OCRResult {
   language: string
   urls: string[]
   slideNumber: number
+  entities: ExtractedEntities
+}
+
+export interface SlideGroup {
+  slideNumber: number
+  results: OCRResult[]
+  startTime: number
+  endTime: number
+  avgConfidence: number
+  allEntities: ExtractedEntities
 }
 
 export interface SessionSummary {
