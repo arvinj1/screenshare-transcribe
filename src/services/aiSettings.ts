@@ -40,6 +40,7 @@ export interface AISettings {
   detail: SummaryDetail
 }
 
+// Storage keys keep the original "st-" prefix so saved settings survive the DeckJot rename
 const MODE_KEY = 'st-summary-mode'
 const API_KEY_KEY = 'st-anthropic-api-key'
 const MODEL_KEY = 'st-claude-model'
