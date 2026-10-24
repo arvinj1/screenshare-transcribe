@@ -8,7 +8,7 @@
 
 **DeckJot turns any screen share (slides, demos, video calls) into notes. It reads the slides, transcribes what's said, connects the two, and writes a summary, right in your browser.**
 
-[![Live app](https://img.shields.io/badge/live%20app-screenshare--transcribe.vercel.app-000000?logo=vercel&logoColor=white)](https://screenshare-transcribe.vercel.app)
+[![Live app](https://img.shields.io/badge/live%20app-deckjot.vercel.app-000000?logo=vercel&logoColor=white)](https://deckjot.vercel.app)
 [![CI](https://github.com/arvinj1/screenshare-transcribe/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arvinj1/screenshare-transcribe/actions/workflows/ci.yml)
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Farvinj1%2Fscreenshare-transcribe)
 
@@ -20,7 +20,7 @@
 ![Local first](https://img.shields.io/badge/capture-local%20first-2EA44F)
 ![Version](https://img.shields.io/badge/version-0.1.0-646CFF)
 
-**[▶ Open the app](https://screenshare-transcribe.vercel.app)** · [Why DeckJot](#-why-deckjot) · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [History](#-session-history) · [Privacy](#-privacy) · [Deploy](#-deploy-to-vercel) · [Whose Claude account?](#-whose-claude-account-is-used) · [Tuning](#-tuning-reference) · [FAQ](#-troubleshooting--faq)
+**[▶ Open the app](https://deckjot.vercel.app)** · [Why DeckJot](#-why-deckjot) · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [History](#-session-history) · [Privacy](#-privacy) · [Deploy](#-deploy-to-vercel) · [Whose Claude account?](#-whose-claude-account-is-used) · [Tuning](#-tuning-reference) · [FAQ](#-troubleshooting--faq)
 
 </div>
 
@@ -57,7 +57,7 @@ Most meeting note-takers only *hear* the meeting. DeckJot also *sees* it: it lin
 
 ### Use it
 
-1. Open **[screenshare-transcribe.vercel.app](https://screenshare-transcribe.vercel.app)** in **Chrome or Edge** (best speech-recognition support). Nothing to install.
+1. Open **[deckjot.vercel.app](https://deckjot.vercel.app)** in **Chrome or Edge** (best speech-recognition support). Nothing to install.
 2. Pick a mode in the header: **Screen+OCR** or **Audio Only**.
 3. Click **Start Sharing** (or **Start Recording** in Audio Only). The share picker opens on **Chrome Tab** — pick the tab with your slides or call.
    *Sharing a tab gives the cleanest text: there are no browser toolbars or menu bars for OCR to misread.*
