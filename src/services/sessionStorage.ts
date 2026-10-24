@@ -75,6 +75,18 @@ export async function deleteSession(id: string): Promise<void> {
   await tx('readwrite', store => store.delete(id))
 }
 
+/** All the words in detailed notes, lower-cased, for search (values only, not field names). */
+function notesText(notes: NonNullable<SessionSummary['aiNotes']>): string {
+  const parts: string[] = []
+  const collect = (v: unknown) => {
+    if (typeof v === 'string') parts.push(v)
+    else if (Array.isArray(v)) v.forEach(collect)
+    else if (v && typeof v === 'object') Object.values(v).forEach(collect)
+  }
+  collect(notes)
+  return parts.join(' ').toLowerCase()
+}
+
 export function searchSessions(sessions: SavedSession[], query: string): SavedSession[] {
   const q = query.trim().toLowerCase()
   if (q.length === 0) return sessions
@@ -85,7 +97,8 @@ export function searchSessions(sessions: SavedSession[], query: string): SavedSe
       summary.fullText.toLowerCase().includes(q) ||
       summary.keywords.some(k => k.toLowerCase().includes(q)) ||
       summary.inference.narrative.toLowerCase().includes(q) ||
-      summary.inference.topicClusters.some(cluster => cluster.some(t => t.toLowerCase().includes(q)))
+      summary.inference.topicClusters.some(cluster => cluster.some(t => t.toLowerCase().includes(q))) ||
+      (summary.aiNotes !== undefined && notesText(summary.aiNotes).includes(q))
     )
   })
 }

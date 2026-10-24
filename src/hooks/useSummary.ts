@@ -26,7 +26,7 @@ function formatDuration(ms: number): string {
   return `${seconds}s`
 }
 
-function buildSlides(results: OCRResult[], audioSegments: AudioSegment[] = []): SlideSummary[] {
+function buildSlides(results: OCRResult[], audioSegments: AudioSegment[] = [], sessionEnd = Date.now()): SlideSummary[] {
   const slideMap = new Map<number, OCRResult[]>()
 
   for (const r of results) {
@@ -66,6 +66,8 @@ function buildSlides(results: OCRResult[], audioSegments: AudioSegment[] = []): 
 
     slides.push({
       slideNumber,
+      startTime: slideStart,
+      endTime: Number.isFinite(slideEnd) ? slideEnd : Math.max(sessionEnd, slideStart),
       captureCount: slideResults.length,
       text: bestCapture.text,
       audioText: slideAudio,
@@ -137,6 +139,7 @@ export function useSummary(aiSettings: AISettings): UseSummaryReturn {
         summarySource: 'ai',
         aiTitle: ai.title,
         aiModel: ai.model,
+        aiNotes: ai.notes,
         inference: {
           ...prev.inference,
           narrative: ai.narrative,

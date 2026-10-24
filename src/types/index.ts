@@ -56,6 +56,8 @@ export interface SessionSummary {
   aiTitle?: string
   /** Claude model that produced the AI summary, when summarySource is 'ai' */
   aiModel?: string
+  /** Detailed Claude notes (present when the Detailed summary setting was used) */
+  aiNotes?: AINotes
   inference: {
     contentType: string
     contentTypeLabel: string
@@ -70,6 +72,9 @@ export interface SessionSummary {
 
 export interface SlideSummary {
   slideNumber: number
+  /** When the slide first appeared and when the next one replaced it (epoch ms); absent in older saved sessions */
+  startTime?: number
+  endTime?: number
   captureCount: number
   text: string
   audioText: string
@@ -80,12 +85,32 @@ export interface SlideSummary {
 export type SummarySource = 'local' | 'ai'
 export type AIStatus = 'off' | 'loading' | 'done' | 'failed'
 
+export interface AIActionItem {
+  task: string
+  /** Empty when not mentioned */
+  owner: string
+  due: string
+}
+
+/** The threaded, detailed part of a Claude summary. */
+export interface AINotes {
+  themes: { name: string; slides: number[]; summary: string }[]
+  /** One entry per slide, or per run of consecutive slides on one topic in long decks */
+  slideNotes: { slides: number[]; title: string; shown: string; said: string; takeaway: string }[]
+  decisions: string[]
+  actionItems: AIActionItem[]
+  openQuestions: string[]
+  keyNumbers: { value: string; context: string }[]
+}
+
 export interface AISummary {
   title: string
   narrative: string
   keyPoints: string[]
   actionItems: string[]
   topics: string[]
+  /** Detailed notes, when requested */
+  notes?: AINotes
   /** Model that wrote the summary (may differ from the one chosen if a fallback ran) */
   model: string
 }

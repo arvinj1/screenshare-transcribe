@@ -1375,3 +1375,90 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== Detailed Claude notes ===== */
+.narrative-box p + p {
+  margin-top: 0.75rem;
+}
+
+.notes-themes,
+.notes-slides {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.notes-card {
+  padding: 0.75rem 0.9rem;
+  background-color: var(--bg-tertiary);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.notes-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.notes-card p {
+  color: var(--text-secondary);
+}
+
+.notes-card p + p {
+  margin-top: 0.3rem;
+}
+
+.notes-takeaway {
+  color: var(--text-primary) !important;
+}
+
+.notes-label {
+  display: inline-block;
+  min-width: 4.75rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.notes-chip {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.72rem;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.notes-numbers {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+}
+
+.notes-numbers > div {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.45rem 0.75rem;
+  background-color: var(--bg-tertiary);
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.notes-numbers dt {
+  flex: none;
+  min-width: 5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.notes-numbers dd {
+  margin: 0;
+  color: var(--text-secondary);
+}
