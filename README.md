@@ -15,7 +15,7 @@
 ![Claude](https://img.shields.io/badge/AI%20summaries-Claude%2C%20your%20own%20key-D97757)
 ![Local first](https://img.shields.io/badge/capture-local%20first-2EA44F)
 
-**[▶ Open the app](https://screenshare-transcribe.vercel.app)** · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [Privacy](#-privacy) · [Deploy](#-deploy-to-vercel) · [Whose Claude account?](#-whose-claude-account-is-used) · [Tuning](#-tuning-reference) · [FAQ](#-troubleshooting--faq)
+**[▶ Open the app](https://screenshare-transcribe.vercel.app)** · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [History](#-session-history) · [Privacy](#-privacy) · [Deploy](#-deploy-to-vercel) · [Whose Claude account?](#-whose-claude-account-is-used) · [Tuning](#-tuning-reference) · [FAQ](#-troubleshooting--faq)
 
 </div>
 
@@ -29,7 +29,7 @@
 | ⚡ **Change detection** | Compares tiny thumbnails first and only runs OCR when the screen actually changed — static slides cost almost nothing. |
 | 🎙️ **Speech, aligned to slides** | Transcribes your microphone with the Web Speech API and attaches each sentence to the slide that was on screen. |
 | 🧠 **Instant + Claude summaries** | An on-device summary (title, key points, action items, topics) appears the moment you stop. Add your own Anthropic API key in **Settings** and Claude rewrites it into a much clearer one. |
-| 🗂️ **Session history** | Every session auto-saves to your browser (IndexedDB). Search, rename, reopen, delete. |
+| 🗂️ **Session history** | Every session auto-saves in your browser, with no expiry. Search, rename, reopen, export, delete. [More](#-session-history) |
 | 📤 **Export** | Markdown, JSON, or copy to clipboard — with a per-slide timeline and the full transcript. |
 | ⏱️ **Long-session safe** | Keeps every capture and segment for the whole session; the live panel stays fast by showing only recent slides. |
 | 🎧 **Audio-only mode** | No screen? Just record and summarize a conversation. |
@@ -182,12 +182,36 @@ With Claude chosen in **Settings**, [`aiSummarizer`](src/services/aiSummarizer.t
 
 ---
 
+## 📚 Session history
+
+Every session is **saved automatically when you stop**: the summary, every slide, and the full transcript. Open **History** in the header to:
+
+| Action | What it does |
+|---|---|
+| **Open** | Click a title to see that session's summary again. |
+| **Search** | Looks through titles, slide text, transcripts, keywords, summaries and topics. |
+| **Rename** | Give a session a clearer title. Claude summaries suggest one automatically. |
+| **Export MD** | A readable Markdown file: summary, key points, action items, slide-by-slide timeline with *what was said*, URLs and transcript. |
+| **Export JSON** | All the session data, for backups or other tools. |
+| **Delete** | Removes the session from this browser permanently (asks to confirm). |
+
+### Where it's kept, and for how long
+
+- **Only in your browser, on this device** (IndexedDB). Nothing is uploaded or synced, and other people using the site can't see it. Another browser or computer has its own, separate history.
+- **No expiry.** Sessions stay until you delete them or clear this site's data in your browser.
+- **Exceptions:** private/incognito windows lose history when they close, and **Safari may remove a site's data after 7 days without a visit**. Chrome and Edge keep it unless the disk is nearly full.
+- **Export anything you want to keep long-term.** There's no backup other than your exports.
+
+Space isn't a concern: a 2-hour session takes well under 1 MB.
+
+---
+
 ## 🔒 Privacy
 
 | Data | Where it goes |
 |---|---|
 | Screen video and frames | **Never leaves your browser.** OCR runs locally. |
-| OCR text, summaries, history | Stored only in this browser's IndexedDB. |
+| OCR text, summaries, history | Stored only in this browser's IndexedDB, until you delete them ([details](#-session-history)). |
 | Microphone audio | Processed by the browser's speech recognition. **In Chrome and Edge this runs on the browser vendor's servers**, not on your device. |
 | Slide text and transcript (Claude on) | Sent **once per session, directly from your browser to Anthropic**, with your own API key ([details](#-whose-claude-account-is-used)). Never images, video or audio. Choose *On this device only* in Settings to keep everything local. |
 | Your API key | Stored only in this browser: session storage by default (gone when the tab closes), or local storage if you tick *Remember on this device*. Sent only to `api.anthropic.com`. |

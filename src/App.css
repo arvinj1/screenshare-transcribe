@@ -962,6 +962,10 @@ body {
   margin-bottom: 1rem;
 }
 
+.history-about {
+  margin: 0.75rem 0 0.25rem;
+}
+
 .history-empty {
   color: var(--text-secondary);
   font-size: 0.9rem;
