@@ -1,8 +1,12 @@
 <div align="center">
 
-# Screen Share Transcribe
+<img src="public/deckjot.svg" alt="DeckJot logo" width="96" height="96" />
 
-**Turn any screen share — slides, demos, video calls — into a searchable transcript and summary, right in your browser.**
+# DeckJot
+
+### Capture what's shown. Remember what's said.
+
+**DeckJot turns any screen share (slides, demos, video calls) into notes. It reads the slides, transcribes what's said, connects the two, and writes a summary, right in your browser.**
 
 [![Live app](https://img.shields.io/badge/live%20app-screenshare--transcribe.vercel.app-000000?logo=vercel&logoColor=white)](https://screenshare-transcribe.vercel.app)
 [![CI](https://github.com/arvinj1/screenshare-transcribe/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arvinj1/screenshare-transcribe/actions/workflows/ci.yml)
@@ -14,10 +18,23 @@
 ![Tesseract.js](https://img.shields.io/badge/OCR-Tesseract.js%205-4B8BBE)
 ![Claude](https://img.shields.io/badge/AI%20summaries-Claude%2C%20your%20own%20key-D97757)
 ![Local first](https://img.shields.io/badge/capture-local%20first-2EA44F)
+![Version](https://img.shields.io/badge/version-0.1.0-646CFF)
 
-**[▶ Open the app](https://screenshare-transcribe.vercel.app)** · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [History](#-session-history) · [Privacy](#-privacy) · [Deploy](#-deploy-to-vercel) · [Whose Claude account?](#-whose-claude-account-is-used) · [Tuning](#-tuning-reference) · [FAQ](#-troubleshooting--faq)
+**[▶ Open the app](https://screenshare-transcribe.vercel.app)** · [Why DeckJot](#-why-deckjot) · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [History](#-session-history) · [Privacy](#-privacy) · [Deploy](#-deploy-to-vercel) · [Whose Claude account?](#-whose-claude-account-is-used) · [Tuning](#-tuning-reference) · [FAQ](#-troubleshooting--faq)
 
 </div>
+
+---
+
+## 💡 Why DeckJot
+
+Most meeting note-takers only *hear* the meeting. DeckJot also *sees* it: it lines up what was on screen with what was said while it was there, slide by slide. That's how it can fix a misheard word from the slide text, or tell you which slide got the most discussion.
+
+- **No bot joins your call.** You share a tab; DeckJot works from that.
+- **Your screen never leaves your browser.** Slide text is read on your computer.
+- **Your key, your data.** Claude-written notes are optional and use your own Anthropic API key, sent straight from your browser to Anthropic.
+
+**Where it's going:** today DeckJot gives you great notes for each session. Next, it becomes a searchable **memory** of everything you've been shown and told, so you can ask *"what did they say about pricing in last month's roadmap review?"* See the [roadmap](#-roadmap).
 
 ---
 
@@ -387,9 +404,23 @@ Static slides are skipped by change detection, and the live panel only renders t
 
 ## 🧭 Roadmap
 
-- [ ] Capture tab audio (not just the microphone)
-- [ ] Optional Claude vision OCR for changed slides (charts, small text), with the same bring-your-own key
+**v0.1.0 (now): notes for every session.** Screen and speech capture, slide-change detection, slide-aligned transcripts, on-device summaries, and detailed Claude notes with your own key. See the [changelog](CHANGELOG.md).
+
+**Next: better capture**
+- [ ] Transcribe the shared tab's own audio on-device (Whisper), so background noise and the microphone don't matter, and remote speakers don't need speakers
+- [ ] Chrome extension: one-click capture on Meet, Teams and other browser calls
+- [ ] Ignore website clutter (sidebars, recommendations, ads) and offer time-based chapters for videos
 - [ ] Speech language selection (currently `en-US`)
+
+**Then: a memory of everything presented**
+- [ ] *Ask your sessions*: Claude answers questions across your saved sessions, with your own key
+- [ ] Keep an image of each slide, so diagrams and demos are remembered, not just their text
+- [ ] Durable storage and one-click backup and restore
+- [ ] Track action items and decisions across sessions
+
+**Later**
+- [ ] Optional Claude vision for charts and small text on changed slides
+- [ ] Decide on optional sync between devices
 - [ ] Unit tests for cleaning, slide alignment and export
 
 ## 🤝 Contributing
